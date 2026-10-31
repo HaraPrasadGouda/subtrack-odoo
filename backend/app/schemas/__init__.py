@@ -49,6 +49,7 @@ from backend.app.schemas.dashboard import DashboardSummary
 from backend.app.schemas.portal import PortalPaymentRequest
 from backend.app.schemas.dunning import ReminderOut, DunningRunOut, DunningStatsOut
 from backend.app.schemas.risk import CustomerRiskOut
+from backend.app.schemas.analytics import RevenueAnalyticsOut, MonthlyRevenueItem
 
 __all__ = [
     "SignupRequest",
@@ -102,4 +103,6 @@ __all__ = [
     "DunningRunOut",
     "DunningStatsOut",
     "CustomerRiskOut",
+    "MonthlyRevenueItem",
+    "RevenueAnalyticsOut",
 ]

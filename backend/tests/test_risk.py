@@ -127,3 +127,4 @@ def test_customer_list_includes_risk_field(client, auth_tokens):
         assert c["risk_level"] in ["Low", "Medium", "High"]
         assert "risk_score" in c
         assert isinstance(c["risk_score"], int)
+

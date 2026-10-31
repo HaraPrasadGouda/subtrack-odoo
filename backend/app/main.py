@@ -17,6 +17,7 @@ from backend.app.routers.billing import router as billing_router
 from backend.app.routers.dashboard import router as dashboard_router
 from backend.app.routers.portal import router as portal_router
 from backend.app.routers.dunning import router as dunning_router
+from backend.app.routers.analytics import router as analytics_router
 
 
 @asynccontextmanager
@@ -57,6 +58,7 @@ app.include_router(billing_router, prefix=settings.API_V1_STR)
 app.include_router(dashboard_router, prefix=settings.API_V1_STR)
 app.include_router(portal_router, prefix=settings.API_V1_STR)
 app.include_router(dunning_router, prefix=settings.API_V1_STR)
+app.include_router(analytics_router, prefix=settings.API_V1_STR)
 
 
 @app.get("/api/health", tags=["Health"])

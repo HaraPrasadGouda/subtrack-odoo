@@ -14,3 +14,4 @@ class CustomerRiskOut(BaseModel):
     late_payments_count: int
 
     model_config = ConfigDict(from_attributes=True)
+

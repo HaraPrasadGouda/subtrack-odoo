@@ -12,6 +12,7 @@ from backend.app.services.dashboard_service import DashboardService
 from backend.app.services.portal_service import PortalService
 from backend.app.services.dunning_service import DunningService
 from backend.app.services.risk_service import RiskService
+from backend.app.services.analytics_service import AnalyticsService
 
 __all__ = [
     "AuthService",
@@ -28,4 +29,5 @@ __all__ = [
     "PortalService",
     "DunningService",
     "RiskService",
+    "AnalyticsService",
 ]

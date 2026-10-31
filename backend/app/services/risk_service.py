@@ -125,3 +125,4 @@ class RiskService:
             c_out.risk_score = risk.risk_score
             results.append(c_out)
         return results
+

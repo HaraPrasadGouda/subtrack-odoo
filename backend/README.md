@@ -165,6 +165,14 @@ Interactive API documentation: `http://localhost:8000/docs`
   - Detailed diagnostic `reasons` list for actionable sales/support follow-up.
 - Customer list annotation: `GET /api/customers` includes `risk_level` and `risk_score` for every customer.
 
+### Step 10: Executive Revenue Analytics
+- `GET /api/analytics`: Comprehensive executive revenue intelligence:
+  - **MRR (Monthly Recurring Revenue)**: Dynamically normalized by billing frequency (`yearly/12`, `weekly*4.33`, `daily*30`, `monthly`).
+  - **ARR (Annual Recurring Revenue)**: Calculated as `MRR * 12`.
+  - **Monthly Churn Rate**: `(closed_subscriptions / (active + closed) * 100)`.
+  - **Expected Revenue Next 30 Days**: Total recurring amount expected across all active subscriptions with upcoming billing in the next 30 days.
+  - **6-Month Historical Revenue Series**: Month-by-month historical payment collections and transaction counts.
+
 ---
 
 ## Running Tests
