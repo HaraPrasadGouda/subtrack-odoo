@@ -26,5 +26,7 @@ class ContactUpdate(BaseModel):
 
 class ContactOut(ContactBase):
     id: int
+    risk_level: Optional[str] = "Low"
+    risk_score: Optional[int] = 0
 
     model_config = ConfigDict(from_attributes=True)

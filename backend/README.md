@@ -156,6 +156,15 @@ Interactive API documentation: `http://localhost:8000/docs`
 - `GET /api/dunning/stats`: Real-time summary metrics on reminders sent, invoices reached, and `overdue_amount_recovered`.
 - `GET /api/dashboard/summary`: Reflects `overdue_amount_recovered` when payments are recorded against reminded overdue invoices.
 
+### Step 9: Customer Churn Risk Analysis
+- `GET /api/customers/{id}/risk`: Detailed risk score (0-100) and classification (`High`, `Medium`, `Low`) evaluated from:
+  - Overdue unpaid invoices and outstanding balance amounts
+  - Historical payments completed past invoice due dates
+  - Paused subscriptions indicating customer churn intent
+  - Subscriptions approaching expiration within 15 days without renewal
+  - Detailed diagnostic `reasons` list for actionable sales/support follow-up.
+- Customer list annotation: `GET /api/customers` includes `risk_level` and `risk_score` for every customer.
+
 ---
 
 ## Running Tests

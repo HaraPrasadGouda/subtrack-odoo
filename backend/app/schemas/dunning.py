@@ -28,3 +28,4 @@ class DunningStatsOut(BaseModel):
     total_reminders_sent: int
     invoices_reminded_count: int
     overdue_amount_recovered: float
+

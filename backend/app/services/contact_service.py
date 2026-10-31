@@ -3,6 +3,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 from backend.app.models.contact import Contact
 from backend.app.schemas.contact import ContactCreate, ContactUpdate, ContactOut
+from backend.app.services.risk_service import RiskService
 
 
 class ContactService:
@@ -12,7 +13,7 @@ class ContactService:
         if search:
             query = query.filter(Contact.name.ilike(f"%{search}%") | Contact.email.ilike(f"%{search}%"))
         contacts = query.offset(skip).limit(limit).all()
-        return [ContactOut.model_validate(c) for c in contacts]
+        return RiskService.get_risk_for_contacts(db, contacts)
 
     @staticmethod
     def get_contact_by_id(db: Session, contact_id: int) -> Contact:

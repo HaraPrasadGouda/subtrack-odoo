@@ -160,3 +160,4 @@ class DunningService:
             invoices_reminded_count=invoices_reminded,
             overdue_amount_recovered=round(float(recovered), 2),
         )
+

@@ -157,3 +157,4 @@ def test_dunning_role_guard(client, auth_tokens):
     portal_headers = {"Authorization": f"Bearer {auth_tokens['portal']}"}
     res = client.post("/api/dunning/run", headers=portal_headers)
     assert res.status_code == 403
+

@@ -54,3 +54,4 @@ def get_dunning_statistics(
 ):
     """Get smart dunning statistics and amount recovered after reminders."""
     return DunningService.get_dunning_stats(db)
+

@@ -107,3 +107,4 @@ def pay_portal_invoice(
     """
     payload = data or PortalPaymentRequest()
     return PortalService.pay_invoice(db, id, payload, current_user)
+

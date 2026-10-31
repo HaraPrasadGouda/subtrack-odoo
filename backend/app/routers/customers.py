@@ -5,7 +5,9 @@ from backend.app.core.database import get_db
 from backend.app.core.deps import require_internal_or_admin
 from backend.app.models.user import User
 from backend.app.schemas.contact import ContactCreate, ContactUpdate, ContactOut
+from backend.app.schemas.risk import CustomerRiskOut
 from backend.app.services.contact_service import ContactService
+from backend.app.services.risk_service import RiskService
 
 router = APIRouter(prefix="/customers", tags=["Customers"])
 
@@ -70,3 +72,17 @@ def delete_customer(
 ):
     """Delete a customer (internal/admin)."""
     return ContactService.delete_contact(db, id)
+
+
+@router.get("/{id}/risk", response_model=CustomerRiskOut)
+def get_customer_churn_risk(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_internal_or_admin),
+):
+    """
+    Get customer churn risk analysis:
+    Score computed from late payments, paused subscriptions, expiry within 15 days,
+    and overdue invoices -> returns High / Medium / Low with explanatory reasons list.
+    """
+    return RiskService.evaluate_customer_risk(db, id)
