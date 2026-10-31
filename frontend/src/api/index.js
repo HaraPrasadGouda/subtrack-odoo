@@ -9,3 +9,4 @@ export * from './taxes';
 export * from './discounts';
 export * from './templates';
 export * from './subscriptions';
+export * from './invoices';
