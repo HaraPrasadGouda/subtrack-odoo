@@ -187,6 +187,18 @@ Interactive API documentation: `http://localhost:8000/docs`
   - Captures plan changes with proration credit and charge details.
   - `PUT /api/subscriptions/{id}/lines/{line_id}`: Line price or quantity adjustments update line amounts and record explicit `price_change` log entries with old and new values.
 
+### Step 13: GST Tax Splitting Engine & Database Seeding
+- **GST Rule Engine**:
+  - Automatically assesses tax jurisdiction:
+    - **Intrastate (Odisha)**: Customer `gst_state == "Odisha"` (case-insensitive) splits tax equally: 50% CGST + 50% SGST, IGST = 0.
+    - **Interstate**: Customer `gst_state != "Odisha"` applies 100% IGST, CGST = 0, SGST = 0.
+  - Applies to both single subscription invoices and automated batch billing runs.
+- **Seeder Script (`backend/seed.py`)**:
+  - Seeds admin (`admin@brightloop.com`), support staff, taxes (GST 18%, 12%, 5%), discounts (`LAUNCH20`, `FLAT100`), products with variants (`Brand=Odoo +560`), recurring plans (daily, weekly, monthly, yearly, auto-close), and quotation templates.
+  - Generates 50 enterprise customers with distributed Indian GST states.
+  - Provisions subscriptions across all statuses (`draft`, `quotation`, `confirmed`, `active`, `paused`, `closed`), overdue invoices, payments, and reminders.
+  - Optional `--bulk 5000` mode for high-volume benchmark testing.
+
 ---
 
 ## Running Tests

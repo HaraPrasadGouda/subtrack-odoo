@@ -22,7 +22,7 @@ from backend.app.models.tax import Tax, TaxType
 from backend.app.models.discount import Discount, DiscountType, DiscountAppliesTo
 from backend.app.models.template import QuotationTemplate, TemplateLine
 from backend.app.models.subscription import Subscription, SubscriptionLine, SubscriptionStatus
-from backend.app.models.invoice import Invoice, InvoiceLine, InvoiceStatus, Payment
+from backend.app.models.invoice import Invoice, InvoiceLine, InvoiceStatus, Payment, Reminder
 
 
 STATES = ["Odisha", "Karnataka", "Maharashtra", "Delhi", "Telangana", "Tamil Nadu", "Gujarat"]
@@ -285,14 +285,23 @@ def seed_core_data(db):
                     )
                     db.add(pay)
                 elif is_overdue and (i % 4 == 0):
-                    # Partial payment on overdue
+                    # Seed reminder on overdue invoice
+                    reminder = Reminder(
+                        invoice_id=inv.id,
+                        day_offset=1,
+                        channel="email",
+                        sent_at=datetime.now(timezone.utc) - timedelta(days=3),
+                    )
+                    db.add(reminder)
+
+                    # Partial payment on overdue after reminder (demonstrates recovery)
                     inv.amount_paid = 300.0
                     pay = Payment(
                         invoice_id=inv.id,
                         method="bank",
                         amount=300.0,
                         date=today - timedelta(days=2),
-                        note="Seeded partial payment",
+                        note="Seeded partial payment after reminder",
                     )
                     db.add(pay)
 
