@@ -44,3 +44,4 @@ class UserService:
     def get_users(db: Session, skip: int = 0, limit: int = 100) -> List[UserOut]:
         users = db.query(User).offset(skip).limit(limit).all()
         return [UserOut.model_validate(u) for u in users]
+

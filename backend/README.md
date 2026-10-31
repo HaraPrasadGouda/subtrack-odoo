@@ -16,13 +16,13 @@ Brightloop Software (Odoo Hackathon)
 backend/
 ├── app/
 │   ├── core/           # Configuration, database engine, security & JWT, dependencies
-│   ├── models/         # SQLAlchemy ORM models (User, etc.)
+│   ├── models/         # SQLAlchemy ORM models (User, Contact, Product, Plan, Tax, Discount, Template)
 │   ├── schemas/        # Pydantic request/response validation schemas
-│   ├── services/       # Business logic (AuthService, UserService, etc.)
-│   ├── routers/        # FastAPI endpoints (/api/auth, /api/users, etc.)
+│   ├── services/       # Business logic (AuthService, ProductService, PlanService, etc.)
+│   ├── routers/        # FastAPI endpoints (/api/auth, /api/users, /api/products, etc.)
 │   ├── init_db.py      # Database bootstrap & admin seeder
 │   └── main.py         # FastAPI application entry point & CORS configuration
-├── tests/              # Pytest test suite
+├── tests/              # Pytest test suite (test_auth.py, test_crud.py)
 ├── .env.example        # Environment variable template
 ├── .gitignore          # Git ignore rules (.venv, .env, *.db)
 ├── pytest.ini          # Pytest configuration
@@ -71,18 +71,24 @@ Interactive API documentation: `http://localhost:8000/docs`
 
 ---
 
-## Implemented Endpoints (Step 1: Auth & User Management)
+## Implemented Endpoints
 
-### Auth (`/api/auth`)
-- `POST /api/auth/signup`: Customer/portal user registration. Validates email uniqueness and password policy (>8 chars + uppercase + lowercase + special character).
+### Step 1: Auth & User Management
+- `POST /api/auth/signup`: Customer/portal user registration (with strict password rules).
 - `POST /api/auth/login`: Authenticates credentials, returns JWT token with user role.
 - `POST /api/auth/forgot-password`: Generates reset token and prints demo reset URL to console.
-- `POST /api/auth/reset-password`: Resets password using token, enforcing the password policy.
-- `GET /api/auth/me`: Retrieves current authenticated user profile.
-
-### Users (`/api/users`)
-- `POST /api/users`: Admin-only endpoint to create `internal`, `admin`, or `portal` users. Protected with role guards.
+- `POST /api/auth/reset-password`: Resets password using token.
+- `GET /api/auth/me`: Retrieves authenticated user profile.
+- `POST /api/users`: Admin-only endpoint to create `internal`, `admin`, or `portal` users.
 - `GET /api/users`: Admin-only endpoint to list all users.
+
+### Step 2: Core Master Data CRUD
+- `/api/products` (+ `/variants`): Products and variants (e.g. Brand=Odoo +560) CRUD (internal/admin).
+- `/api/plans`: Recurring subscription plans CRUD (daily/weekly/monthly/yearly, auto_close, pausable, renewable) (internal/admin).
+- `/api/taxes`: Taxes CRUD (Internal has read access; edits restricted to admin).
+- `/api/discounts`: Discounts CRUD (admin only).
+- `/api/templates`: Quotation templates and template lines CRUD (internal/admin).
+- `/api/customers`: Customer contacts CRUD with state/GST details (internal/admin).
 
 ---
 

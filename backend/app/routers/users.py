@@ -36,3 +36,4 @@ def list_users(
     Only accessible by users with role 'admin'.
     """
     return UserService.get_users(db, skip=skip, limit=limit)
+

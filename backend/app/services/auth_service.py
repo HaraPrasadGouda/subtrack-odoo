@@ -127,3 +127,4 @@ class AuthService:
         db.commit()
 
         return MessageResponse(message="Password has been reset successfully.")
+

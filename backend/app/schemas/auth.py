@@ -42,3 +42,4 @@ class ResetPasswordRequest(BaseModel):
 class MessageResponse(BaseModel):
     message: str
     detail: Optional[str] = None
+

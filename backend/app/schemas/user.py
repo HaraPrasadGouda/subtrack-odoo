@@ -8,3 +8,4 @@ class UserCreateRequest(BaseModel):
     email: EmailStr
     password: str
     role: str = "internal"  # admin, internal, portal
+

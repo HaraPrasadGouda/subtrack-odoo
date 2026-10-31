@@ -21,3 +21,4 @@ class User(Base):
     reset_token = Column(String(255), nullable=True, index=True)
     reset_expiry = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+

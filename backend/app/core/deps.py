@@ -61,3 +61,4 @@ def require_roles(*allowed_roles: str) -> Callable[[User], User]:
 
 require_admin = require_roles("admin")
 require_internal_or_admin = require_roles("admin", "internal")
+

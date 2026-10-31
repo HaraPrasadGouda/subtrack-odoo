@@ -5,6 +5,12 @@ from backend.app.core.config import settings
 from backend.app.init_db import setup_database
 from backend.app.routers.auth import router as auth_router
 from backend.app.routers.users import router as users_router
+from backend.app.routers.products import router as products_router
+from backend.app.routers.plans import router as plans_router
+from backend.app.routers.taxes import router as taxes_router
+from backend.app.routers.discounts import router as discounts_router
+from backend.app.routers.templates import router as templates_router
+from backend.app.routers.customers import router as customers_router
 
 
 @asynccontextmanager
@@ -30,9 +36,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# API routes
+# Register routers under /api
 app.include_router(auth_router, prefix=settings.API_V1_STR)
 app.include_router(users_router, prefix=settings.API_V1_STR)
+app.include_router(products_router, prefix=settings.API_V1_STR)
+app.include_router(plans_router, prefix=settings.API_V1_STR)
+app.include_router(taxes_router, prefix=settings.API_V1_STR)
+app.include_router(discounts_router, prefix=settings.API_V1_STR)
+app.include_router(templates_router, prefix=settings.API_V1_STR)
+app.include_router(customers_router, prefix=settings.API_V1_STR)
 
 
 @app.get("/api/health", tags=["Health"])
