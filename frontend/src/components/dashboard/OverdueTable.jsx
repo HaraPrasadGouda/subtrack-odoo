@@ -70,7 +70,7 @@ export default function OverdueTable({ invoices, loading }) {
             {invoices.map((inv) => (
               <tr key={inv.id} className="hover:bg-gray-50/50 transition-colors">
                 <td className="px-5 py-3 font-medium text-blue-600">{inv.id}</td>
-                <td className="px-5 py-3 text-gray-700">{inv.customer}</td>
+                <td className="px-5 py-3 text-gray-700">{typeof inv.customer === 'object' ? inv.customer?.name : inv.customer}</td>
                 <td className="px-5 py-3 text-right font-semibold text-gray-900">{formatINR(inv.amount)}</td>
                 <td className="px-5 py-3 text-gray-500">{formatDate(inv.due_date)}</td>
                 <td className="px-5 py-3 text-center">

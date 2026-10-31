@@ -800,11 +800,11 @@ function SubscriptionDetailView({ subscriptionId, onBack }) {
                   <div key={item.id} className="relative">
                     <span className="absolute -left-5 top-1 w-2.5 h-2.5 rounded-full bg-blue-500 ring-4 ring-white" />
                     <div>
-                      <p className="text-xs font-semibold text-gray-800">{item.detail}</p>
+                      <p className="text-xs font-semibold text-gray-800">{item.detail || item.new_value || item.action}</p>
                       <div className="flex items-center gap-2 mt-0.5 text-[11px] text-gray-400">
-                        <span>{formatDate(item.timestamp)}</span>
+                        <span>{formatDate(item.timestamp || item.created_at)}</span>
                         <span>•</span>
-                        <span>{item.user}</span>
+                        <span>{item.user?.name || item.user}</span>
                       </div>
                     </div>
                   </div>

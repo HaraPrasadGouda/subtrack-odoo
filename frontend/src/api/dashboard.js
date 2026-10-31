@@ -127,7 +127,7 @@ export async function getAnalytics(params = {}) {
     const diffDays = Math.max(0, Math.floor((today - due) / (1000 * 60 * 60 * 24)));
     return {
       id: inv.number || `INV-${inv.id}`,
-      customer: inv.contact?.name || `Customer #${inv.contact_id || inv.id}`,
+      customer: inv.customer?.name || inv.contact?.name || inv.customer_name || `Customer #${inv.customer_id || inv.id}`,
       amount: inv.total || 0,
       due_date: inv.due_date,
       days_overdue: diffDays,
