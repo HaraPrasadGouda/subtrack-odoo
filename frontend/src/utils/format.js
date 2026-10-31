@@ -45,3 +45,4 @@ export function formatDate(dateStr) {
     year: 'numeric',
   });
 }
+

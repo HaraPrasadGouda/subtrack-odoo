@@ -76,3 +76,4 @@ export async function getAnalytics(params = {}) {
   const { data } = await apiClient.get('/analytics', { params });
   return data;
 }
+

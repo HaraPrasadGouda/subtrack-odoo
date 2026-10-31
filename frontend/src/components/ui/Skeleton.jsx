@@ -39,3 +39,4 @@ export function TableRowSkeleton({ cols = 5 }) {
     </tr>
   );
 }
+
