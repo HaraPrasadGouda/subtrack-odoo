@@ -10,6 +10,7 @@ from backend.app.services.subscription_service import SubscriptionService
 from backend.app.services.invoice_service import InvoiceService
 from backend.app.services.dashboard_service import DashboardService
 from backend.app.services.portal_service import PortalService
+from backend.app.services.dunning_service import DunningService
 
 __all__ = [
     "AuthService",
@@ -24,4 +25,5 @@ __all__ = [
     "InvoiceService",
     "DashboardService",
     "PortalService",
+    "DunningService",
 ]

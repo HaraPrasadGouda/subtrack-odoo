@@ -145,6 +145,17 @@ Interactive API documentation: `http://localhost:8000/docs`
 - `GET /api/portal/invoices/{id}`: Detailed invoice breakdown for customer.
 - `POST /api/portal/invoices/{id}/pay`: Mock online payment against customer's outstanding invoice (defaults to full remaining balance if amount not specified; automatically marks invoice as `paid` upon full settlement).
 
+### Step 8: Smart Dunning & Overdue Recovery
+- `POST /api/dunning/run`: Automated overdue dunning job.
+  - Automatically identifies overdue invoices (`due_date < check_date`, status open/unpaid).
+  - Triggers email reminders at milestones: **Day 1**, **Day 3**, and **Day 7** overdue.
+  - Dedupes: Never sends duplicate reminders for the same invoice and milestone offset.
+  - Console logging for demonstration and writes audit entries to `activity_log`.
+  - Records entries in `reminders` table (`id`, `invoice_id`, `day_offset`, `sent_at`, `channel`).
+- `GET /api/dunning/reminders`: Historical sent reminders list with invoice filtering and pagination.
+- `GET /api/dunning/stats`: Real-time summary metrics on reminders sent, invoices reached, and `overdue_amount_recovered`.
+- `GET /api/dashboard/summary`: Reflects `overdue_amount_recovered` when payments are recorded against reminded overdue invoices.
+
 ---
 
 ## Running Tests

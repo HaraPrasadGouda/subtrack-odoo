@@ -11,6 +11,7 @@ from backend.app.routers.invoices import router as invoices_router
 from backend.app.routers.billing import router as billing_router
 from backend.app.routers.dashboard import router as dashboard_router
 from backend.app.routers.portal import router as portal_router
+from backend.app.routers.dunning import router as dunning_router
 
 __all__ = [
     "auth_router",
@@ -26,4 +27,5 @@ __all__ = [
     "billing_router",
     "dashboard_router",
     "portal_router",
+    "dunning_router",
 ]

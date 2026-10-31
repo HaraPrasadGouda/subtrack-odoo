@@ -47,6 +47,7 @@ from backend.app.schemas.invoice import (
 )
 from backend.app.schemas.dashboard import DashboardSummary
 from backend.app.schemas.portal import PortalPaymentRequest
+from backend.app.schemas.dunning import ReminderOut, DunningRunOut, DunningStatsOut
 
 __all__ = [
     "SignupRequest",
@@ -96,4 +97,7 @@ __all__ = [
     "PaymentOut",
     "DashboardSummary",
     "PortalPaymentRequest",
+    "ReminderOut",
+    "DunningRunOut",
+    "DunningStatsOut",
 ]
