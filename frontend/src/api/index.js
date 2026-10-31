@@ -5,3 +5,5 @@ export * from './auth';
 export * from './dashboard';
 export * from './products';
 export * from './plans';
+export * from './taxes';
+export * from './discounts';
