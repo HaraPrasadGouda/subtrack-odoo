@@ -208,6 +208,48 @@ def seed_core_data(db):
         portal_contact.user_id = portal_user.id
     customers.append(portal_contact)
 
+    # Ensure portal user has at least one active subscription and invoice
+    portal_subs = db.query(Subscription).filter(Subscription.customer_id == portal_contact.id).all()
+    if not portal_subs and plans:
+        today = date.today()
+        sub_count = db.query(Subscription).count() + 1
+        p_sub = Subscription(
+            number=f"SUB-PORTAL-{sub_count:04d}",
+            customer_id=portal_contact.id,
+            plan_id=plans[0].id,
+            start_date=today - timedelta(days=20),
+            next_billing_date=today + timedelta(days=10),
+            payment_terms="Immediate",
+            status=SubscriptionStatus.ACTIVE.value,
+        )
+        db.add(p_sub)
+        db.flush()
+        if products:
+            db.add(SubscriptionLine(subscription_id=p_sub.id, product_id=products[0].id, qty=1, amount=1000.0))
+            db.flush()
+
+        inv_count = db.query(Invoice).count() + 1
+        p_inv = Invoice(
+            number=f"INV-PORTAL-{inv_count:04d}",
+            subscription_id=p_sub.id,
+            customer_id=portal_contact.id,
+            invoice_date=today - timedelta(days=5),
+            due_date=today + timedelta(days=15),
+            period_start=today - timedelta(days=20),
+            period_end=today + timedelta(days=10),
+            subtotal=1000.0,
+            discount_total=0.0,
+            tax_total=180.0,
+            cgst=90.0,
+            sgst=90.0,
+            igst=0.0,
+            total=1180.0,
+            amount_paid=0.0,
+            status=InvoiceStatus.CONFIRMED.value,
+        )
+        db.add(p_inv)
+        db.commit()
+
     existing_contacts = {c.email: c for c in db.query(Contact).all()}
     for i in range(1, 51):
         email = f"customer{i}@brightloop.demo"
