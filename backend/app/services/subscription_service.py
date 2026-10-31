@@ -413,6 +413,66 @@ class SubscriptionService:
         ).order_by(ActivityLog.created_at.desc()).all()
 
     @staticmethod
+    def update_line_price(
+        db: Session,
+        sub_id: int,
+        line_id: int,
+        new_unit_price: float,
+        new_qty: Optional[int] = None,
+        user_id: Optional[int] = None,
+    ) -> SubscriptionOut:
+        sub = SubscriptionService.get_subscription_by_id(db, sub_id)
+        line = db.query(SubscriptionLine).filter(
+            SubscriptionLine.id == line_id,
+            SubscriptionLine.subscription_id == sub_id,
+        ).first()
+        if not line:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Subscription line {line_id} not found on subscription {sub_id}.",
+            )
+
+        old_price = line.unit_price
+        old_qty = line.qty
+        old_amount = line.amount
+
+        line.unit_price = round(new_unit_price, 2)
+        if new_qty is not None and new_qty > 0:
+            line.qty = new_qty
+
+        # Recalculate line amount
+        line_subtotal = line.qty * line.unit_price
+        discount_val = 0.0
+        if line.discount:
+            if line.discount.type == "percent":
+                discount_val = line_subtotal * (line.discount.value / 100.0)
+            else:
+                discount_val = line.discount.value
+        discount_val = min(discount_val, line_subtotal)
+
+        tax_val = 0.0
+        if line.tax:
+            taxable = line_subtotal - discount_val
+            tax_val = taxable * (line.tax.rate_percent / 100.0)
+
+        new_amount = round(line_subtotal - discount_val + tax_val, 2)
+        line.amount = new_amount
+
+        # Write activity log
+        log = ActivityLog(
+            entity_type="subscription",
+            entity_id=sub.id,
+            action="price_change",
+            old_value=f"Line #{line.id}: price={old_price}, qty={old_qty}, total={old_amount}",
+            new_value=f"Line #{line.id}: price={line.unit_price}, qty={line.qty}, total={line.amount}",
+            user_id=user_id,
+        )
+        db.add(log)
+        db.commit()
+        db.refresh(sub)
+        return SubscriptionService.to_out(db, sub)
+
+    @staticmethod
     def change_plan(
         db: Session,
         sub_id: int,

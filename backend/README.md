@@ -181,6 +181,12 @@ Interactive API documentation: `http://localhost:8000/docs`
   - Generates an adjusted invoice detailing the credit and new plan charges.
   - Updates subscription plan and logs full audit details to activity timeline.
 
+### Step 12: Activity Timeline & Price Tracking
+- `GET /api/subscriptions/{id}/timeline`: Full chronological audit trail of all subscription modifications:
+  - Captures subscription creation, all status stepper transitions (`draft`, `quotation`, `confirmed`, `active`, `paused`, `closed`).
+  - Captures plan changes with proration credit and charge details.
+  - `PUT /api/subscriptions/{id}/lines/{line_id}`: Line price or quantity adjustments update line amounts and record explicit `price_change` log entries with old and new values.
+
 ---
 
 ## Running Tests

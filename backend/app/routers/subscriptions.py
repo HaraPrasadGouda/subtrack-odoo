@@ -9,6 +9,7 @@ from backend.app.schemas.subscription import (
     SubscriptionOut,
     SubscriptionFromTemplate,
     SubscriptionStatusUpdate,
+    SubscriptionLinePriceUpdate,
     ChangePlanRequest,
     ChangePlanResponse,
 )
@@ -146,6 +147,23 @@ def change_subscription_plan(
     and creates an adjusted invoice.
     """
     return SubscriptionService.change_plan(db, id, data.new_plan_id, current_user.id)
+
+
+@router.put("/{id}/lines/{line_id}", response_model=SubscriptionOut)
+def update_subscription_line_price(
+    id: int,
+    line_id: int,
+    data: SubscriptionLinePriceUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_internal_or_admin),
+):
+    """
+    Update line price/quantity on subscription:
+    Recalculates line amount and logs a price_change event in the activity timeline.
+    """
+    return SubscriptionService.update_line_price(
+        db, id, line_id, data.unit_price, new_qty=data.qty, user_id=current_user.id
+    )
 
 
 @router.get("/{id}/timeline", response_model=List[ActivityLogOut])

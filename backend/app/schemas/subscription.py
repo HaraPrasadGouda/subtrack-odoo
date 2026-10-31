@@ -57,6 +57,11 @@ class SubscriptionStatusUpdate(BaseModel):
     status: str
 
 
+class SubscriptionLinePriceUpdate(BaseModel):
+    unit_price: float
+    qty: Optional[int] = None
+
+
 class ChangePlanRequest(BaseModel):
     new_plan_id: int
 
