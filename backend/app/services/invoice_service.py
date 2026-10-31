@@ -3,7 +3,7 @@ import re
 from datetime import date, datetime, timedelta, timezone
 from typing import List, Optional, Tuple
 from fastapi import HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -252,7 +252,11 @@ class InvoiceService:
         customer_id: Optional[int] = None,
         overdue: Optional[bool] = None,
     ) -> List[InvoiceOut]:
-        query = db.query(Invoice)
+        query = db.query(Invoice).options(
+            selectinload(Invoice.lines),
+            selectinload(Invoice.customer),
+            selectinload(Invoice.payments),
+        )
 
         if status:
             if status.lower() == "outstanding":

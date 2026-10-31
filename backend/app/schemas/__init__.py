@@ -45,6 +45,7 @@ from backend.app.schemas.invoice import (
     PaymentCreate,
     PaymentOut,
 )
+from backend.app.schemas.dashboard import DashboardSummary
 
 __all__ = [
     "SignupRequest",
@@ -92,4 +93,5 @@ __all__ = [
     "SendInvoiceResponse",
     "PaymentCreate",
     "PaymentOut",
+    "DashboardSummary",
 ]

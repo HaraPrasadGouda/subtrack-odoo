@@ -2,7 +2,7 @@ import re
 from datetime import date, datetime, timedelta, timezone
 from typing import List, Optional, Tuple
 from fastapi import HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from backend.app.models.subscription import Subscription, SubscriptionLine, SubscriptionStatus
 from backend.app.models.contact import Contact
 from backend.app.models.plan import RecurringPlan, BillingPeriod
@@ -156,7 +156,11 @@ class SubscriptionService:
         status_filter: Optional[str] = None,
         customer_id: Optional[int] = None,
     ) -> List[SubscriptionOut]:
-        query = db.query(Subscription)
+        query = db.query(Subscription).options(
+            selectinload(Subscription.lines),
+            selectinload(Subscription.customer),
+            selectinload(Subscription.plan),
+        )
         if status_filter:
             query = query.filter(Subscription.status == status_filter)
         if customer_id:

@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, date as dt_date, datetime as dt_datetime
 from typing import List, Optional
 from pydantic import BaseModel, ConfigDict, Field
 from backend.app.schemas.contact import ContactOut
@@ -23,7 +23,7 @@ class InvoiceLineOut(BaseModel):
 class PaymentCreate(BaseModel):
     method: str = "bank"  # upi, card, bank, cash
     amount: float = Field(..., gt=0, description="Payment amount must be greater than 0")
-    date: Optional[date] = None
+    date: Optional[dt_date] = None
     note: Optional[str] = None
 
 
@@ -32,7 +32,7 @@ class PaymentOut(BaseModel):
     invoice_id: int
     method: str
     amount: float
-    date: date
+    date: dt_date
     note: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)

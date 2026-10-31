@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, status, Query
 from sqlalchemy.orm import Session
 from backend.app.core.database import get_db
@@ -12,12 +12,21 @@ router = APIRouter(prefix="/discounts", tags=["Discounts"])
 
 @router.get("", response_model=List[DiscountOut])
 def list_discounts(
+    page: Optional[int] = Query(None, ge=1, description="Page number (1-based)"),
+    size: Optional[int] = Query(None, ge=1, le=500, description="Page size"),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
     db: Session = Depends(get_db),
     current_admin: User = Depends(require_admin),
 ):
-    """List discounts (admin only)."""
+    """List discounts with pagination (page, size) (admin only)."""
+    if page is not None:
+        page_size = size or 20
+        skip = (page - 1) * page_size
+        limit = page_size
+    elif size is not None:
+        limit = size
+
     return DiscountService.get_discounts(db, skip=skip, limit=limit)
 
 

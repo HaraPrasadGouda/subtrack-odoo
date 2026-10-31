@@ -17,6 +17,8 @@ router = APIRouter(prefix="/invoices", tags=["Invoices"])
 
 @router.get("", response_model=List[InvoiceOut])
 def list_invoices(
+    page: Optional[int] = Query(None, ge=1, description="Page number (1-based)"),
+    size: Optional[int] = Query(None, ge=1, le=500, description="Page size"),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
     status: Optional[str] = None,
@@ -26,12 +28,19 @@ def list_invoices(
     current_user: User = Depends(require_internal_or_admin),
 ):
     """
-    List invoices with filters:
+    List invoices with filters and pagination (page, size):
     - status (draft, confirmed, paid, cancelled, or special: 'outstanding')
     - customer_id
     - overdue (true/false)
-    - pagination (skip, limit)
+    - pagination (page/size or skip/limit)
     """
+    if page is not None:
+        page_size = size or 20
+        skip = (page - 1) * page_size
+        limit = page_size
+    elif size is not None:
+        limit = size
+
     return InvoiceService.get_invoices(
         db,
         skip=skip,

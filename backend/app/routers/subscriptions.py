@@ -18,6 +18,8 @@ router = APIRouter(prefix="/subscriptions", tags=["Subscriptions"])
 
 @router.get("", response_model=List[SubscriptionOut])
 def list_subscriptions(
+    page: Optional[int] = Query(None, ge=1, description="Page number (1-based)"),
+    size: Optional[int] = Query(None, ge=1, le=500, description="Page size"),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
     status: Optional[str] = None,
@@ -25,7 +27,14 @@ def list_subscriptions(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_internal_or_admin),
 ):
-    """List subscriptions with optional status and customer filters."""
+    """List subscriptions with optional status and customer filters and pagination (page, size)."""
+    if page is not None:
+        page_size = size or 20
+        skip = (page - 1) * page_size
+        limit = page_size
+    elif size is not None:
+        limit = size
+
     return SubscriptionService.get_subscriptions(
         db,
         skip=skip,

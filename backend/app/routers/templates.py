@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, status, Query
 from sqlalchemy.orm import Session
 from backend.app.core.database import get_db
@@ -18,12 +18,21 @@ router = APIRouter(prefix="/templates", tags=["Quotation Templates"])
 
 @router.get("", response_model=List[QuotationTemplateOut])
 def list_templates(
+    page: Optional[int] = Query(None, ge=1, description="Page number (1-based)"),
+    size: Optional[int] = Query(None, ge=1, le=500, description="Page size"),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_internal_or_admin),
 ):
-    """List quotation templates (internal/admin)."""
+    """List quotation templates with pagination (page, size) (internal/admin)."""
+    if page is not None:
+        page_size = size or 20
+        skip = (page - 1) * page_size
+        limit = page_size
+    elif size is not None:
+        limit = size
+
     return TemplateService.get_templates(db, skip=skip, limit=limit)
 
 

@@ -19,13 +19,22 @@ router = APIRouter(prefix="/products", tags=["Products"])
 
 @router.get("", response_model=List[ProductOut])
 def list_products(
+    page: Optional[int] = Query(None, ge=1, description="Page number (1-based)"),
+    size: Optional[int] = Query(None, ge=1, le=500, description="Page size"),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
     search: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_internal_or_admin),
 ):
-    """List products with their variants (internal/admin)."""
+    """List products with their variants and pagination (page, size)."""
+    if page is not None:
+        page_size = size or 20
+        skip = (page - 1) * page_size
+        limit = page_size
+    elif size is not None:
+        limit = size
+
     return ProductService.get_products(db, skip=skip, limit=limit, search=search)
 
 

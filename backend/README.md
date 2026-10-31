@@ -119,6 +119,23 @@ Interactive API documentation: `http://localhost:8000/docs`
 - `GET /api/invoices?status=outstanding`: Filter for unpaid or partially paid invoices (`amount_paid < total` and status not cancelled or paid).
 - `GET /api/invoices?overdue=true`: Filter for invoices with `due_date < today` that remain unpaid.
 
+### Step 6: Dashboard Analytics, Pagination & Performance Seed
+- `GET /api/dashboard/summary`: Real-time dashboard KPI summary returning:
+  - `active_subscriptions`, `total_subscriptions`, and complete `status_breakdown`
+  - `revenue_this_month` / `payments_total` and `payments_count` (filterable by `start_date` and `end_date`)
+  - `outstanding_amount` and `outstanding_count`
+  - `overdue_amount` and `overdue_count`
+- Uniform pagination: Every list endpoint supports `page` and `size` query parameters (with backward-compatible `skip`/`limit` support).
+- Optimized query execution: High performance queries using `selectinload` and SQL aggregation, benchmarked at `< 2.0s` for 5,000 subscriptions.
+- Database Seeder (`seed.py`):
+  ```bash
+  # Standard demo seed (50 customers, products, plans, taxes, discounts, invoices):
+  python backend/seed.py
+
+  # Performance testing seed (adds 5,000 subscriptions):
+  python backend/seed.py --bulk 5000
+  ```
+
 ---
 
 ## Running Tests

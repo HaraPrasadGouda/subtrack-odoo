@@ -9,6 +9,7 @@ from backend.app.routers.customers import router as customers_router
 from backend.app.routers.subscriptions import router as subscriptions_router
 from backend.app.routers.invoices import router as invoices_router
 from backend.app.routers.billing import router as billing_router
+from backend.app.routers.dashboard import router as dashboard_router
 
 __all__ = [
     "auth_router",
@@ -22,4 +23,5 @@ __all__ = [
     "subscriptions_router",
     "invoices_router",
     "billing_router",
+    "dashboard_router",
 ]
