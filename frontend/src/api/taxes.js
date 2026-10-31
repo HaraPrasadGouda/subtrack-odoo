@@ -63,7 +63,9 @@ export async function getTaxes(params = {}) {
     return items;
   }
   const { data } = await apiClient.get('/taxes', { params });
-  return data;
+  const list = Array.isArray(data) ? data : (data.taxes || []);
+  list.taxes = list;
+  return list;
 }
 
 /**
@@ -99,7 +101,12 @@ export async function createTax(payload) {
     MOCK_TAXES.push(tax);
     return tax;
   }
-  const { data } = await apiClient.post('/taxes', payload);
+  const formatted = {
+    ...payload,
+    rate_percent: Number(payload.rate_percent) || 0,
+    type: payload.type || 'gst',
+  };
+  const { data } = await apiClient.post('/taxes', formatted);
   return data;
 }
 
@@ -123,7 +130,11 @@ export async function updateTax(id, payload) {
     };
     return MOCK_TAXES[idx];
   }
-  const { data } = await apiClient.put(`/taxes/${id}`, payload);
+  const formatted = { ...payload };
+  if (formatted.rate_percent !== undefined) {
+    formatted.rate_percent = Number(formatted.rate_percent);
+  }
+  const { data } = await apiClient.put(`/taxes/${id}`, formatted);
   return data;
 }
 

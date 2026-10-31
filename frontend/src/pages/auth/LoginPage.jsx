@@ -141,10 +141,33 @@ export default function LoginPage() {
 
         {/* Demo hint */}
         <div className="mt-6 p-3 rounded-lg bg-blue-50 border border-blue-100">
-          <p className="text-xs text-blue-700 font-medium mb-1">Demo credentials</p>
-          <p className="text-xs text-blue-600">Admin: admin@subtrack.app / any password</p>
-          <p className="text-xs text-blue-600">Staff: staff@subtrack.app / any password</p>
-          <p className="text-xs text-blue-600">Portal: customer@example.com / any password</p>
+          <p className="text-xs text-blue-700 font-semibold mb-2">Seed Demo Accounts</p>
+          <div className="space-y-1.5 text-xs text-blue-800">
+            <button
+              type="button"
+              onClick={() => setForm({ email: 'admin@brightloop.com', password: 'Admin@1234' })}
+              className="w-full text-left p-1.5 rounded hover:bg-blue-100/60 transition-colors flex justify-between items-center group cursor-pointer"
+            >
+              <span><strong>Admin:</strong> admin@brightloop.com / Admin@1234</span>
+              <span className="text-[10px] text-blue-600 uppercase tracking-wider font-semibold opacity-0 group-hover:opacity-100">Auto-fill</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setForm({ email: 'staff@brightloop.com', password: 'Staff@1234' })}
+              className="w-full text-left p-1.5 rounded hover:bg-blue-100/60 transition-colors flex justify-between items-center group cursor-pointer"
+            >
+              <span><strong>Staff:</strong> staff@brightloop.com / Staff@1234</span>
+              <span className="text-[10px] text-blue-600 uppercase tracking-wider font-semibold opacity-0 group-hover:opacity-100">Auto-fill</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setForm({ email: 'portal@brightloop.com', password: 'Portal@1234' })}
+              className="w-full text-left p-1.5 rounded hover:bg-blue-100/60 transition-colors flex justify-between items-center group cursor-pointer"
+            >
+              <span><strong>Portal:</strong> portal@brightloop.com / Portal@1234</span>
+              <span className="text-[10px] text-blue-600 uppercase tracking-wider font-semibold opacity-0 group-hover:opacity-100">Auto-fill</span>
+            </button>
+          </div>
         </div>
       </Card>
     </AuthShell>

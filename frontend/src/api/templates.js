@@ -172,7 +172,17 @@ export async function createTemplate(payload) {
     MOCK_TEMPLATES.push(tmpl);
     return tmpl;
   }
-  const { data } = await apiClient.post('/templates', payload);
+  const formatted = {
+    name: payload.name,
+    validity_days: Number(payload.validity_days) || 30,
+    plan_id: payload.plan_id ? Number(payload.plan_id) : null,
+    lines: (payload.lines || []).map((l) => ({
+      product_id: Number(l.product_id),
+      variant_id: l.variant_id ? Number(l.variant_id) : null,
+      qty: Number(l.qty) || 1,
+    })),
+  };
+  const { data } = await apiClient.post('/templates', formatted);
   return data;
 }
 
@@ -198,7 +208,12 @@ export async function updateTemplate(id, payload) {
     };
     return MOCK_TEMPLATES[idx];
   }
-  const { data } = await apiClient.put(`/templates/${id}`, payload);
+  const formatted = {
+    name: payload.name,
+    validity_days: payload.validity_days ? Number(payload.validity_days) : undefined,
+    plan_id: payload.plan_id ? Number(payload.plan_id) : null,
+  };
+  const { data } = await apiClient.put(`/templates/${id}`, formatted);
   return data;
 }
 

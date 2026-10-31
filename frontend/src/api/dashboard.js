@@ -61,8 +61,24 @@ export async function getDashboardSummary(params = {}) {
     await delay(500);
     return MOCK_SUMMARY;
   }
-  const { data } = await apiClient.get('/dashboard/summary', { params });
-  return data;
+  const [summaryRes, analyticsRes] = await Promise.all([
+    apiClient.get('/dashboard/summary', { params }),
+    apiClient.get('/analytics', { params }).catch(() => ({ data: {} })),
+  ]);
+
+  const s = summaryRes.data;
+  const a = analyticsRes.data || {};
+
+  return {
+    ...s,
+    active_subscriptions: s.active_subscriptions,
+    revenue_this_month: s.revenue_this_month,
+    payments_received: s.payments_total ?? s.payments_received ?? 0,
+    outstanding: s.outstanding_amount ?? s.outstanding ?? 0,
+    overdue_invoices: s.overdue_count ?? s.overdue_invoices ?? 0,
+    mrr: a.mrr ?? 0,
+    arr: a.arr ?? 0,
+  };
 }
 
 /**
@@ -73,7 +89,57 @@ export async function getAnalytics(params = {}) {
     await delay(700);
     return MOCK_ANALYTICS;
   }
-  const { data } = await apiClient.get('/analytics', { params });
-  return data;
+
+  const [analyticsRes, summaryRes, overdueRes] = await Promise.all([
+    apiClient.get('/analytics', { params }).catch(() => ({ data: {} })),
+    apiClient.get('/dashboard/summary', { params }).catch(() => ({ data: {} })),
+    apiClient.get('/invoices', { params: { overdue: true } }).catch(() => ({ data: [] })),
+  ]);
+
+  const a = analyticsRes.data || {};
+  const s = summaryRes.data || {};
+  const overdueList = Array.isArray(overdueRes.data) ? overdueRes.data : [];
+
+  const STATUS_COLORS = {
+    active: '#22c55e',
+    paused: '#f59e0b',
+    closed: '#ef4444',
+    cancelled: '#ef4444',
+    draft: '#94a3b8',
+    expired: '#6b7280',
+  };
+
+  const revenue_chart = (a.monthly_revenue_last_6_months || []).map((m) => ({
+    month: m.month_name || m.month,
+    revenue: m.revenue,
+    expenses: 0,
+  }));
+
+  const subscription_status = Object.entries(s.status_breakdown || {}).map(([status, count]) => ({
+    name: status.charAt(0).toUpperCase() + status.slice(1),
+    value: count,
+    color: STATUS_COLORS[status.toLowerCase()] || '#3b82f6',
+  }));
+
+  const today = new Date();
+  const overdue_invoices = overdueList.map((inv) => {
+    const due = inv.due_date ? new Date(inv.due_date) : today;
+    const diffDays = Math.max(0, Math.floor((today - due) / (1000 * 60 * 60 * 24)));
+    return {
+      id: inv.number || `INV-${inv.id}`,
+      customer: inv.contact?.name || `Customer #${inv.contact_id || inv.id}`,
+      amount: inv.total || 0,
+      due_date: inv.due_date,
+      days_overdue: diffDays,
+      status: 'Overdue',
+    };
+  });
+
+  return {
+    ...a,
+    revenue_chart,
+    subscription_status,
+    overdue_invoices,
+  };
 }
 

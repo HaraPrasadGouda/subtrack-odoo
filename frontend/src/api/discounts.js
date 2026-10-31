@@ -148,7 +148,17 @@ export async function createDiscount(payload) {
     MOCK_DISCOUNTS.push(disc);
     return disc;
   }
-  const { data } = await apiClient.post('/discounts', payload);
+  const formatted = {
+    ...payload,
+    value: Number(payload.value) || 0,
+    min_purchase: Number(payload.min_purchase) || 0,
+    min_qty: Number(payload.min_qty) || 0,
+    start_date: payload.start_date || null,
+    end_date: payload.end_date || null,
+    usage_limit: payload.usage_limit ? Number(payload.usage_limit) : null,
+    product_id: payload.product_id ? Number(payload.product_id) : null,
+  };
+  const { data } = await apiClient.post('/discounts', formatted);
   return data;
 }
 
@@ -179,7 +189,17 @@ export async function updateDiscount(id, payload) {
     };
     return MOCK_DISCOUNTS[idx];
   }
-  const { data } = await apiClient.put(`/discounts/${id}`, payload);
+  const formatted = { ...payload };
+  if (formatted.value !== undefined) formatted.value = Number(formatted.value);
+  if (formatted.min_purchase !== undefined) formatted.min_purchase = Number(formatted.min_purchase);
+  if (formatted.min_qty !== undefined) formatted.min_qty = Number(formatted.min_qty);
+  if (formatted.start_date === '') formatted.start_date = null;
+  if (formatted.end_date === '') formatted.end_date = null;
+  if (formatted.usage_limit === '') formatted.usage_limit = null;
+  if (formatted.usage_limit !== undefined && formatted.usage_limit !== null) formatted.usage_limit = Number(formatted.usage_limit);
+  if (formatted.product_id === '' || formatted.product_id === 0) formatted.product_id = null;
+  if (formatted.product_id !== undefined && formatted.product_id !== null) formatted.product_id = Number(formatted.product_id);
+  const { data } = await apiClient.put(`/discounts/${id}`, formatted);
   return data;
 }
 

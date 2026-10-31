@@ -6,7 +6,7 @@
 
 import axios from 'axios';
 
-export const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true' || true;
+export const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
@@ -94,8 +94,13 @@ export async function signup({ name, email, password }) {
     return { user, token };
   }
 
-  const { data } = await apiClient.post('/auth/signup', { name, email, password });
-  return data;
+  const { data: user } = await apiClient.post('/auth/signup', { name, email, password });
+  const { data: tokenData } = await apiClient.post('/auth/login', { email, password });
+  return {
+    user: tokenData.user || user,
+    token: tokenData.access_token,
+    access_token: tokenData.access_token,
+  };
 }
 
 /**
@@ -116,7 +121,12 @@ export async function login({ email, password }) {
   }
 
   const { data } = await apiClient.post('/auth/login', { email, password });
-  return data;
+  return {
+    user: data.user,
+    token: data.access_token,
+    access_token: data.access_token,
+    token_type: data.token_type,
+  };
 }
 
 /**
@@ -166,7 +176,7 @@ export async function resetPassword({ token, password }) {
     return { message: 'Password reset successfully. You can now log in.' };
   }
 
-  const { data } = await apiClient.post('/auth/reset-password', { token, password });
+  const { data } = await apiClient.post('/auth/reset-password', { token, new_password: password });
   return data;
 }
 

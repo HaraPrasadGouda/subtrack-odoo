@@ -112,3 +112,4 @@ def test_gst_split_interstate_igst(client, auth_tokens):
     assert inv["sgst"] == 0.0
     assert inv["igst"] == 180.0
     assert inv["total"] == 1180.0
+

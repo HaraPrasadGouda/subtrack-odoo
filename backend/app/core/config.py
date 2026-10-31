@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440  # 24 hours
     DATABASE_URL: str = "sqlite:///./subtrack.db"
-    CORS_ORIGINS: Union[List[str], str] = ["http://localhost:5173"]
+    CORS_ORIGINS: Union[List[str], str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
     ADMIN_EMAIL: str = "admin@brightloop.com"
     ADMIN_PASSWORD: str = "Admin@1234"

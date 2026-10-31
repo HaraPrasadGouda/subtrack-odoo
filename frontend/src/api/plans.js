@@ -117,7 +117,10 @@ export async function getPlans(params = {}) {
     return { plans: items, total: items.length };
   }
   const { data } = await apiClient.get('/plans', { params });
-  return data;
+  const list = Array.isArray(data) ? data : (data.plans || []);
+  list.plans = list;
+  list.total = list.length;
+  return list;
 }
 
 /**
@@ -158,7 +161,18 @@ export async function createPlan(payload) {
     MOCK_PLANS.push(plan);
     return plan;
   }
-  const { data } = await apiClient.post('/plans', payload);
+  const formatted = {
+    ...payload,
+    price: Number(payload.price) || 0,
+    min_qty: Number(payload.min_qty) || 1,
+    start_date: payload.start_date || null,
+    end_date: payload.end_date || null,
+    auto_close: Boolean(payload.auto_close),
+    closable: Boolean(payload.closable),
+    pausable: Boolean(payload.pausable),
+    renewable: Boolean(payload.renewable),
+  };
+  const { data } = await apiClient.post('/plans', formatted);
   return data;
 }
 
@@ -186,7 +200,12 @@ export async function updatePlan(id, payload) {
     };
     return MOCK_PLANS[idx];
   }
-  const { data } = await apiClient.put(`/plans/${id}`, payload);
+  const formatted = { ...payload };
+  if (formatted.price !== undefined) formatted.price = Number(formatted.price);
+  if (formatted.min_qty !== undefined) formatted.min_qty = Number(formatted.min_qty);
+  if (formatted.start_date === '') formatted.start_date = null;
+  if (formatted.end_date === '') formatted.end_date = null;
+  const { data } = await apiClient.put(`/plans/${id}`, formatted);
   return data;
 }
 

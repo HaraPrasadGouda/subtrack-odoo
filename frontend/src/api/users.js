@@ -62,7 +62,7 @@ export async function getUsers(params = {}) {
     return items;
   }
   const { data } = await apiClient.get('/users', { params });
-  return data;
+  return Array.isArray(data) ? data : (data.users || []);
 }
 
 /**

@@ -174,7 +174,15 @@ export async function createCustomer(payload) {
     MOCK_CUSTOMERS.push(customer);
     return customer;
   }
-  const { data } = await apiClient.post('/customers', payload);
+  const formatted = {
+    name: payload.name,
+    email: payload.email,
+    phone: payload.phone || null,
+    address: payload.address || null,
+    gst_state: payload.gst_state || null,
+    user_id: payload.user_id ? Number(payload.user_id) : null,
+  };
+  const { data } = await apiClient.post('/customers', formatted);
   return data;
 }
 
@@ -196,7 +204,11 @@ export async function updateCustomer(id, payload) {
     };
     return MOCK_CUSTOMERS[idx];
   }
-  const { data } = await apiClient.put(`/customers/${id}`, payload);
+  const formatted = { ...payload };
+  if (formatted.user_id !== undefined) {
+    formatted.user_id = formatted.user_id ? Number(formatted.user_id) : null;
+  }
+  const { data } = await apiClient.put(`/customers/${id}`, formatted);
   return data;
 }
 

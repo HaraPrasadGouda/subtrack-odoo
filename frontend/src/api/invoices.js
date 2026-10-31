@@ -324,7 +324,13 @@ export async function recordPayment(id, payload) {
     }
     return payment;
   }
-  const { data } = await apiClient.post(`/invoices/${id}/payments`, payload);
+  const formatted = {
+    method: payload.method || 'bank',
+    amount: Number(payload.amount),
+    date: payload.date || null,
+    note: payload.note || null,
+  };
+  const { data } = await apiClient.post(`/invoices/${id}/payments`, formatted);
   return data;
 }
 
@@ -360,8 +366,24 @@ export async function getAllPayments() {
     });
     return all.sort((a, b) => new Date(b.date) - new Date(a.date));
   }
-  const { data } = await apiClient.get('/payments');
-  return data;
+  const { data: invoices } = await apiClient.get('/invoices', { params: { limit: 500 } });
+  const all = [];
+  (invoices || []).forEach((inv) => {
+    (inv.payments || []).forEach((p) => {
+      all.push({
+        id: p.id,
+        invoice_id: inv.id,
+        invoice_number: inv.number,
+        customer_name: inv.customer?.name || `Customer #${inv.customer_id}`,
+        customer_email: inv.customer?.email,
+        amount: p.amount,
+        method: p.method,
+        date: p.date,
+        note: p.note,
+      });
+    });
+  });
+  return all.sort((a, b) => new Date(b.date) - new Date(a.date));
 }
 
 /**

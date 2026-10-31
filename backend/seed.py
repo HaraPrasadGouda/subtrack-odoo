@@ -52,6 +52,16 @@ def seed_core_data(db):
             role=UserRole.INTERNAL.value,
         )
         db.add(staff)
+
+    portal_user = db.query(User).filter(User.email == "portal@brightloop.com").first()
+    if not portal_user:
+        portal_user = User(
+            name="Portal Customer",
+            email="portal@brightloop.com",
+            password_hash=get_password_hash("Portal@1234"),
+            role=UserRole.PORTAL.value,
+        )
+        db.add(portal_user)
     db.commit()
 
     # 2. Taxes
@@ -180,6 +190,24 @@ def seed_core_data(db):
     # 7. Seed 50 Customers
     print("Seeding 50 customers...")
     customers = []
+
+    # Ensure portal user has a linked customer contact
+    portal_contact = db.query(Contact).filter(Contact.email == "portal@brightloop.com").first()
+    if not portal_contact:
+        portal_contact = Contact(
+            name="Acme Portal Client",
+            email="portal@brightloop.com",
+            phone="+91 98765 00001",
+            address="Tech Zone 1, Innovation Park",
+            gst_state="Odisha",
+            user_id=portal_user.id,
+        )
+        db.add(portal_contact)
+        db.flush()
+    else:
+        portal_contact.user_id = portal_user.id
+    customers.append(portal_contact)
+
     existing_contacts = {c.email: c for c in db.query(Contact).all()}
     for i in range(1, 51):
         email = f"customer{i}@brightloop.demo"

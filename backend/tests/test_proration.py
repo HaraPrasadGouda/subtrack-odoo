@@ -158,3 +158,4 @@ def test_proration_validation_rules(client, auth_tokens):
     )
     assert closed_res.status_code == 400
     assert "closed" in closed_res.json()["detail"]
+

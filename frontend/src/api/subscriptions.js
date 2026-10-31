@@ -248,7 +248,24 @@ export async function createSubscription(payload) {
     ];
     return sub;
   }
-  const { data } = await apiClient.post('/subscriptions', payload);
+  const formatted = {
+    customer_id: Number(payload.customer_id),
+    plan_id: Number(payload.plan_id),
+    start_date: payload.start_date || null,
+    expiry_date: payload.expiry_date || null,
+    next_billing_date: payload.next_billing_date || payload.start_date || null,
+    payment_terms: payload.payment_terms || 'Immediate',
+    status: payload.status || 'draft',
+    lines: (payload.lines || []).map((l) => ({
+      product_id: Number(l.product_id),
+      variant_id: l.variant_id ? Number(l.variant_id) : null,
+      qty: Number(l.qty) || 1,
+      unit_price: l.unit_price != null ? Number(l.unit_price) : null,
+      tax_id: l.tax_id ? Number(l.tax_id) : null,
+      discount_id: l.discount_id ? Number(l.discount_id) : null,
+    })),
+  };
+  const { data } = await apiClient.post('/subscriptions', formatted);
   return data;
 }
 
@@ -308,7 +325,12 @@ export async function createFromTemplate(templateId, payload) {
     ];
     return sub;
   }
-  const { data } = await apiClient.post(`/subscriptions/from-template/${templateId}`, payload);
+  const formatted = {
+    customer_id: Number(payload.customer_id),
+    start_date: payload.start_date || null,
+    payment_terms: payload.payment_terms || 'Immediate',
+  };
+  const { data } = await apiClient.post(`/subscriptions/from-template/${templateId}`, formatted);
   return data;
 }
 
@@ -339,27 +361,33 @@ export async function updateSubscriptionStatus(id, status) {
  * POST /subscriptions/:id/pause
  */
 export async function pauseSubscription(id) {
-  return updateSubscriptionStatus(id, 'paused');
+  if (USE_MOCK) return updateSubscriptionStatus(id, 'paused');
+  const { data } = await apiClient.post(`/subscriptions/${id}/pause`);
+  return data;
 }
 
 /**
  * POST /subscriptions/:id/renew
  */
 export async function renewSubscription(id) {
-  return updateSubscriptionStatus(id, 'active');
+  if (USE_MOCK) return updateSubscriptionStatus(id, 'active');
+  const { data } = await apiClient.post(`/subscriptions/${id}/renew`);
+  return data;
 }
 
 /**
  * POST /subscriptions/:id/close
  */
 export async function closeSubscription(id) {
-  return updateSubscriptionStatus(id, 'closed');
+  if (USE_MOCK) return updateSubscriptionStatus(id, 'closed');
+  const { data } = await apiClient.post(`/subscriptions/${id}/close`);
+  return data;
 }
 
 /**
  * POST /subscriptions/:id/change-plan
  */
-export async function changePlan(id, { plan_id, plan }) {
+export async function changePlan(id, { plan_id, new_plan_id, plan }) {
   if (USE_MOCK) {
     await delay(400);
     const sub = MOCK_SUBSCRIPTIONS.find((s) => s.id === Number(id));
@@ -367,13 +395,13 @@ export async function changePlan(id, { plan_id, plan }) {
     const oldPrice = sub.plan?.price || 0;
     const newPrice = plan?.price || oldPrice;
     const proratedDiff = Math.max(0, newPrice - oldPrice);
-    sub.plan_id = Number(plan_id);
+    sub.plan_id = Number(plan_id || new_plan_id);
     if (plan) sub.plan = plan;
     if (!MOCK_TIMELINES[id]) MOCK_TIMELINES[id] = [];
     MOCK_TIMELINES[id].push({
       id: Date.now(),
       action: 'plan_changed',
-      detail: `Plan changed to ${plan?.name || plan_id}. Proration adjustment: ₹${(proratedDiff / 100).toFixed(2)}`,
+      detail: `Plan changed to ${plan?.name || plan_id || new_plan_id}. Proration adjustment: ₹${(proratedDiff / 100).toFixed(2)}`,
       timestamp: new Date().toISOString(),
       user: 'Current User',
     });
@@ -383,7 +411,8 @@ export async function changePlan(id, { plan_id, plan }) {
       effective_date: new Date().toISOString().split('T')[0],
     };
   }
-  const { data } = await apiClient.post(`/subscriptions/${id}/change-plan`, { plan_id });
+  const targetId = Number(new_plan_id || plan_id);
+  const { data } = await apiClient.post(`/subscriptions/${id}/change-plan`, { new_plan_id: targetId });
   return data;
 }
 

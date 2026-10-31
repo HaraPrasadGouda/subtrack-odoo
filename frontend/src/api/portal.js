@@ -262,7 +262,12 @@ export async function payPortalInvoice(id, payload = {}) {
     }
     return payment;
   }
-  const { data } = await apiClient.post(`/portal/invoices/${id}/pay`, payload);
+  const formatted = {
+    method: payload.method || 'card',
+    amount: payload.amount != null ? Number(payload.amount) : undefined,
+    note: payload.note || 'Portal payment',
+  };
+  const { data } = await apiClient.post(`/portal/invoices/${id}/pay`, formatted);
   return data;
 }
 

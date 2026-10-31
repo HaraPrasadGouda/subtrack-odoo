@@ -109,7 +109,10 @@ export async function getProducts(params = {}) {
     return { products: items, total: items.length };
   }
   const { data } = await apiClient.get('/products', { params });
-  return data;
+  const list = Array.isArray(data) ? data : (data.products || []);
+  list.products = list;
+  list.total = list.length;
+  return list;
 }
 
 /**
@@ -200,8 +203,8 @@ export async function getVariants(productId) {
     const product = MOCK_PRODUCTS.find((p) => p.id === Number(productId));
     return product?.variants || [];
   }
-  const { data } = await apiClient.get(`/products/${productId}/variants`);
-  return data;
+  const { data } = await apiClient.get(`/products/${productId}`);
+  return data?.variants || [];
 }
 
 /**

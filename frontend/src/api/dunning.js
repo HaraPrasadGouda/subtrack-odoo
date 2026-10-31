@@ -203,6 +203,37 @@ export async function getDunningInvoices() {
     await delay(400);
     return MOCK_OVERDUE_INVOICES;
   }
-  const { data } = await apiClient.get('/invoices', { params: { overdue: true } });
-  return data;
+  const [invoicesRes, remindersRes] = await Promise.all([
+    apiClient.get('/invoices', { params: { overdue: true, limit: 100 } }),
+    apiClient.get('/dunning/reminders', { params: { size: 500 } }).catch(() => ({ data: [] })),
+  ]);
+
+  const invoices = Array.isArray(invoicesRes.data) ? invoicesRes.data : [];
+  const reminders = Array.isArray(remindersRes.data) ? remindersRes.data : [];
+
+  const today = new Date();
+
+  return invoices.map((inv) => {
+    const due = inv.due_date ? new Date(inv.due_date) : today;
+    const days_overdue = Math.max(0, Math.floor((today - due) / (1000 * 60 * 60 * 24)));
+    const amount_due = Math.max(0, (inv.total || 0) - (inv.amount_paid || 0));
+
+    const invReminders = reminders.filter((r) => r.invoice_id === inv.id);
+    const day_1 = invReminders.some((r) => r.day_offset === 1);
+    const day_3 = invReminders.some((r) => r.day_offset === 3);
+    const day_7 = invReminders.some((r) => r.day_offset === 7);
+
+    const sortedReminders = [...invReminders].sort(
+      (a, b) => new Date(b.sent_at) - new Date(a.sent_at)
+    );
+    const last_sent = sortedReminders.length > 0 ? sortedReminders[0].sent_at : null;
+
+    return {
+      ...inv,
+      days_overdue,
+      amount_due,
+      milestones: { day_1, day_3, day_7 },
+      last_sent,
+    };
+  });
 }
