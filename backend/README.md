@@ -136,6 +136,15 @@ Interactive API documentation: `http://localhost:8000/docs`
   python backend/seed.py --bulk 5000
   ```
 
+### Step 7: Customer Self-Service Portal
+- `GET /api/portal/subscriptions`: Authenticated customer retrieves strictly their own subscriptions with full lines, status, and recurring plan details.
+- `GET /api/portal/subscriptions/{id}`: Customer views their own subscription details.
+- `POST /api/portal/subscriptions/{id}/pause`: Customer can pause their own subscription if the associated plan has `pausable=True`.
+- `POST /api/portal/subscriptions/{id}/cancel` (or `/close`): Customer can cancel their own subscription if `closable=True`.
+- `GET /api/portal/invoices`: Customer views strictly their own invoices.
+- `GET /api/portal/invoices/{id}`: Detailed invoice breakdown for customer.
+- `POST /api/portal/invoices/{id}/pay`: Mock online payment against customer's outstanding invoice (defaults to full remaining balance if amount not specified; automatically marks invoice as `paid` upon full settlement).
+
 ---
 
 ## Running Tests
