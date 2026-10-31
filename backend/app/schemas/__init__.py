@@ -27,6 +27,16 @@ from backend.app.schemas.template import (
     TemplateLineCreate,
     TemplateLineOut,
 )
+from backend.app.schemas.subscription import (
+    SubscriptionCreate,
+    SubscriptionUpdate,
+    SubscriptionOut,
+    SubscriptionLineCreate,
+    SubscriptionLineOut,
+    SubscriptionFromTemplate,
+    SubscriptionStatusUpdate,
+)
+from backend.app.schemas.activity import ActivityLogOut
 
 __all__ = [
     "SignupRequest",
@@ -60,4 +70,12 @@ __all__ = [
     "QuotationTemplateOut",
     "TemplateLineCreate",
     "TemplateLineOut",
+    "SubscriptionCreate",
+    "SubscriptionUpdate",
+    "SubscriptionOut",
+    "SubscriptionLineCreate",
+    "SubscriptionLineOut",
+    "SubscriptionFromTemplate",
+    "SubscriptionStatusUpdate",
+    "ActivityLogOut",
 ]

@@ -5,6 +5,8 @@ from backend.app.models.plan import RecurringPlan, BillingPeriod
 from backend.app.models.tax import Tax, TaxType
 from backend.app.models.discount import Discount, DiscountType, DiscountAppliesTo
 from backend.app.models.template import QuotationTemplate, TemplateLine
+from backend.app.models.subscription import Subscription, SubscriptionLine, SubscriptionStatus
+from backend.app.models.activity import ActivityLog
 
 __all__ = [
     "User",
@@ -21,4 +23,8 @@ __all__ = [
     "DiscountAppliesTo",
     "QuotationTemplate",
     "TemplateLine",
+    "Subscription",
+    "SubscriptionLine",
+    "SubscriptionStatus",
+    "ActivityLog",
 ]

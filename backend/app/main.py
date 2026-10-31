@@ -11,6 +11,7 @@ from backend.app.routers.taxes import router as taxes_router
 from backend.app.routers.discounts import router as discounts_router
 from backend.app.routers.templates import router as templates_router
 from backend.app.routers.customers import router as customers_router
+from backend.app.routers.subscriptions import router as subscriptions_router
 
 
 @asynccontextmanager
@@ -45,6 +46,7 @@ app.include_router(taxes_router, prefix=settings.API_V1_STR)
 app.include_router(discounts_router, prefix=settings.API_V1_STR)
 app.include_router(templates_router, prefix=settings.API_V1_STR)
 app.include_router(customers_router, prefix=settings.API_V1_STR)
+app.include_router(subscriptions_router, prefix=settings.API_V1_STR)
 
 
 @app.get("/api/health", tags=["Health"])

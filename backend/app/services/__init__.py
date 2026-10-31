@@ -6,6 +6,7 @@ from backend.app.services.plan_service import PlanService
 from backend.app.services.tax_service import TaxService
 from backend.app.services.discount_service import DiscountService
 from backend.app.services.template_service import TemplateService
+from backend.app.services.subscription_service import SubscriptionService
 
 __all__ = [
     "AuthService",
@@ -16,4 +17,5 @@ __all__ = [
     "TaxService",
     "DiscountService",
     "TemplateService",
+    "SubscriptionService",
 ]

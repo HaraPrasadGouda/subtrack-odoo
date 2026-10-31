@@ -1,0 +1,408 @@
+import re
+from datetime import date, datetime, timedelta, timezone
+from typing import List, Optional, Tuple
+from fastapi import HTTPException, status
+from sqlalchemy.orm import Session
+from backend.app.models.subscription import Subscription, SubscriptionLine, SubscriptionStatus
+from backend.app.models.contact import Contact
+from backend.app.models.plan import RecurringPlan, BillingPeriod
+from backend.app.models.product import Product, ProductVariant
+from backend.app.models.tax import Tax
+from backend.app.models.discount import Discount, DiscountType
+from backend.app.models.template import QuotationTemplate
+from backend.app.models.activity import ActivityLog
+from backend.app.schemas.subscription import (
+    SubscriptionCreate,
+    SubscriptionUpdate,
+    SubscriptionOut,
+    SubscriptionLineCreate,
+    SubscriptionLineOut,
+    SubscriptionFromTemplate,
+)
+
+
+class SubscriptionService:
+
+    @staticmethod
+    def calculate_next_date(from_date: date, billing_period: str) -> date:
+        """Calculate next date based on billing period."""
+        if billing_period == BillingPeriod.DAILY.value:
+            return from_date + timedelta(days=1)
+        elif billing_period == BillingPeriod.WEEKLY.value:
+            return from_date + timedelta(weeks=1)
+        elif billing_period == BillingPeriod.MONTHLY.value:
+            # Add 30 days as standard monthly cycle
+            return from_date + timedelta(days=30)
+        elif billing_period == BillingPeriod.YEARLY.value:
+            # Add 365 days as standard yearly cycle
+            return from_date + timedelta(days=365)
+        return from_date + timedelta(days=30)
+
+    @staticmethod
+    def generate_number(db: Session) -> str:
+        """Generate auto subscription number in sequence SUB-0001, SUB-0002, ..."""
+        subs = db.query(Subscription.number).filter(Subscription.number.like("SUB-%")).all()
+        max_num = 0
+        for (num_str,) in subs:
+            match = re.search(r"SUB-(\d+)", num_str)
+            if match:
+                val = int(match.group(1))
+                if val > max_num:
+                    max_num = val
+        return f"SUB-{max_num + 1:04d}"
+
+    @staticmethod
+    def calculate_line_amount(
+        db: Session,
+        product_id: int,
+        variant_id: Optional[int],
+        qty: int,
+        unit_price: Optional[float],
+        tax_id: Optional[int],
+        discount_id: Optional[int],
+    ) -> Tuple[float, float]:
+        """
+        Calculates line unit_price (if not specified) and total line amount:
+        (variant extra price + tax + discount).
+        Returns: (final_unit_price, final_amount)
+        """
+        product = db.query(Product).filter(Product.id == product_id).first()
+        if not product:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Product {product_id} not found")
+
+        variant_extra = 0.0
+        if variant_id:
+            variant = db.query(ProductVariant).filter(
+                ProductVariant.id == variant_id,
+                ProductVariant.product_id == product_id,
+            ).first()
+            if not variant:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Variant {variant_id} does not match product {product_id}")
+            variant_extra = variant.extra_price
+
+        # If unit_price not provided, base is product sales price + variant extra
+        if unit_price is None or unit_price == 0.0:
+            final_unit_price = product.sales_price + variant_extra
+        else:
+            final_unit_price = unit_price
+
+        base_amount = qty * final_unit_price
+
+        # Calculate discount
+        discount_amount = 0.0
+        if discount_id:
+            discount = db.query(Discount).filter(Discount.id == discount_id).first()
+            if discount:
+                if discount.type == DiscountType.PERCENT.value:
+                    discount_amount = base_amount * (discount.value / 100.0)
+                elif discount.type == DiscountType.FIXED.value:
+                    discount_amount = min(discount.value, base_amount)
+
+        discounted_amount = max(0.0, base_amount - discount_amount)
+
+        # Calculate tax
+        tax_amount = 0.0
+        if tax_id:
+            tax = db.query(Tax).filter(Tax.id == tax_id).first()
+            if tax:
+                tax_amount = discounted_amount * (tax.rate_percent / 100.0)
+
+        final_amount = round(discounted_amount + tax_amount, 2)
+        return final_unit_price, final_amount
+
+    @staticmethod
+    def check_and_apply_auto_close(db: Session, sub: Subscription) -> bool:
+        """
+        Plans with auto_close close automatically after end_date.
+        """
+        if sub.plan and sub.plan.auto_close:
+            today = date.today()
+            should_close = False
+            if sub.plan.end_date and sub.plan.end_date < today:
+                should_close = True
+            elif sub.expiry_date and sub.expiry_date < today:
+                should_close = True
+
+            if should_close and sub.status not in (SubscriptionStatus.CLOSED.value, SubscriptionStatus.DRAFT.value):
+                old_status = sub.status
+                sub.status = SubscriptionStatus.CLOSED.value
+                log = ActivityLog(
+                    entity_type="subscription",
+                    entity_id=sub.id,
+                    action="auto_close",
+                    old_value=old_status,
+                    new_value=SubscriptionStatus.CLOSED.value,
+                    user_id=None,
+                )
+                db.add(log)
+                db.commit()
+                db.refresh(sub)
+                return True
+        return False
+
+    @staticmethod
+    def to_out(db: Session, sub: Subscription) -> SubscriptionOut:
+        SubscriptionService.check_and_apply_auto_close(db, sub)
+        total = sum(line.amount for line in sub.lines)
+        out = SubscriptionOut.model_validate(sub)
+        out.total_amount = round(total, 2)
+        return out
+
+    @staticmethod
+    def get_subscriptions(
+        db: Session,
+        skip: int = 0,
+        limit: int = 100,
+        status_filter: Optional[str] = None,
+        customer_id: Optional[int] = None,
+    ) -> List[SubscriptionOut]:
+        query = db.query(Subscription)
+        if status_filter:
+            query = query.filter(Subscription.status == status_filter)
+        if customer_id:
+            query = query.filter(Subscription.customer_id == customer_id)
+
+        subs = query.order_by(Subscription.id.desc()).offset(skip).limit(limit).all()
+        return [SubscriptionService.to_out(db, s) for s in subs]
+
+    @staticmethod
+    def get_subscription_by_id(db: Session, sub_id: int) -> Subscription:
+        sub = db.query(Subscription).filter(Subscription.id == sub_id).first()
+        if not sub:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Subscription {sub_id} not found")
+        SubscriptionService.check_and_apply_auto_close(db, sub)
+        return sub
+
+    @staticmethod
+    def create_subscription(db: Session, data: SubscriptionCreate, user_id: Optional[int]) -> SubscriptionOut:
+        customer = db.query(Contact).filter(Contact.id == data.customer_id).first()
+        if not customer:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Customer {data.customer_id} not found")
+
+        plan = db.query(RecurringPlan).filter(RecurringPlan.id == data.plan_id).first()
+        if not plan:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Plan {data.plan_id} not found")
+
+        sub_number = SubscriptionService.generate_number(db)
+        start_date = data.start_date or date.today()
+        next_billing = data.next_billing_date or start_date
+        init_status = data.status or SubscriptionStatus.DRAFT.value
+
+        sub = Subscription(
+            number=sub_number,
+            customer_id=data.customer_id,
+            plan_id=data.plan_id,
+            start_date=start_date,
+            expiry_date=data.expiry_date,
+            next_billing_date=next_billing,
+            payment_terms=data.payment_terms or "Immediate",
+            status=init_status,
+            created_by=user_id,
+        )
+        db.add(sub)
+        db.flush()
+
+        if data.lines:
+            for l_in in data.lines:
+                unit_p, amt = SubscriptionService.calculate_line_amount(
+                    db,
+                    l_in.product_id,
+                    l_in.variant_id,
+                    l_in.qty,
+                    l_in.unit_price,
+                    l_in.tax_id,
+                    l_in.discount_id,
+                )
+                line = SubscriptionLine(
+                    subscription_id=sub.id,
+                    product_id=l_in.product_id,
+                    variant_id=l_in.variant_id,
+                    qty=l_in.qty,
+                    unit_price=unit_p,
+                    tax_id=l_in.tax_id,
+                    discount_id=l_in.discount_id,
+                    amount=amt,
+                )
+                db.add(line)
+
+        # Log creation
+        log = ActivityLog(
+            entity_type="subscription",
+            entity_id=sub.id,
+            action="created",
+            old_value=None,
+            new_value=f"Created {sub.number} in status {sub.status}",
+            user_id=user_id,
+        )
+        db.add(log)
+
+        db.commit()
+        db.refresh(sub)
+        return SubscriptionService.to_out(db, sub)
+
+    @staticmethod
+    def create_from_template(
+        db: Session,
+        template_id: int,
+        data: SubscriptionFromTemplate,
+        user_id: Optional[int],
+    ) -> SubscriptionOut:
+        template = db.query(QuotationTemplate).filter(QuotationTemplate.id == template_id).first()
+        if not template:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Quotation template {template_id} not found")
+
+        if not template.plan_id:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Template does not have an associated plan")
+
+        customer = db.query(Contact).filter(Contact.id == data.customer_id).first()
+        if not customer:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Customer {data.customer_id} not found")
+
+        start_date = data.start_date or date.today()
+        expiry_date = start_date + timedelta(days=template.validity_days)
+
+        sub_create = SubscriptionCreate(
+            customer_id=data.customer_id,
+            plan_id=template.plan_id,
+            start_date=start_date,
+            expiry_date=expiry_date,
+            next_billing_date=start_date,
+            payment_terms=data.payment_terms or "Immediate",
+            status=SubscriptionStatus.QUOTATION.value,
+            lines=[
+                SubscriptionLineCreate(
+                    product_id=l.product_id,
+                    variant_id=l.variant_id,
+                    qty=l.qty,
+                )
+                for l in template.lines
+            ],
+        )
+        return SubscriptionService.create_subscription(db, sub_create, user_id)
+
+    @staticmethod
+    def update_status(
+        db: Session,
+        sub_id: int,
+        new_status: str,
+        user_id: Optional[int],
+    ) -> SubscriptionOut:
+        sub = SubscriptionService.get_subscription_by_id(db, sub_id)
+        current_status = sub.status
+
+        valid_statuses = [s.value for s in SubscriptionStatus]
+        if new_status not in valid_statuses:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid status '{new_status}'. Allowed values: {', '.join(valid_statuses)}",
+            )
+
+        if current_status == new_status:
+            return SubscriptionService.to_out(db, sub)
+
+        # Allowed transitions map
+        allowed_transitions = {
+            SubscriptionStatus.DRAFT.value: [SubscriptionStatus.QUOTATION.value, SubscriptionStatus.CONFIRMED.value, SubscriptionStatus.CLOSED.value],
+            SubscriptionStatus.QUOTATION.value: [SubscriptionStatus.CONFIRMED.value, SubscriptionStatus.DRAFT.value, SubscriptionStatus.CLOSED.value],
+            SubscriptionStatus.CONFIRMED.value: [SubscriptionStatus.ACTIVE.value, SubscriptionStatus.DRAFT.value, SubscriptionStatus.CLOSED.value],
+            SubscriptionStatus.ACTIVE.value: [SubscriptionStatus.PAUSED.value, SubscriptionStatus.CLOSED.value, SubscriptionStatus.ACTIVE.value],
+            SubscriptionStatus.PAUSED.value: [SubscriptionStatus.ACTIVE.value, SubscriptionStatus.CLOSED.value],
+            SubscriptionStatus.CLOSED.value: [SubscriptionStatus.DRAFT.value, SubscriptionStatus.ACTIVE.value],
+        }
+
+        allowed = allowed_transitions.get(current_status, [])
+        if new_status not in allowed:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Cannot transition status from '{current_status}' to '{new_status}'. Allowed: {', '.join(allowed)}",
+            )
+
+        # Plan constraints verification
+        plan = sub.plan
+        if new_status == SubscriptionStatus.PAUSED.value:
+            if not plan.pausable:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="The subscription plan does not allow pausing.",
+                )
+
+        if new_status == SubscriptionStatus.CLOSED.value:
+            if not plan.closable:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="The subscription plan does not allow closing.",
+                )
+
+        if current_status == SubscriptionStatus.CLOSED.value and new_status == SubscriptionStatus.ACTIVE.value:
+            if not plan.renewable:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="The subscription plan does not allow renewal.",
+                )
+
+        # Apply status change
+        sub.status = new_status
+        log = ActivityLog(
+            entity_type="subscription",
+            entity_id=sub.id,
+            action="status_change",
+            old_value=current_status,
+            new_value=new_status,
+            user_id=user_id,
+        )
+        db.add(log)
+        db.commit()
+        db.refresh(sub)
+        return SubscriptionService.to_out(db, sub)
+
+    @staticmethod
+    def pause_subscription(db: Session, sub_id: int, user_id: Optional[int]) -> SubscriptionOut:
+        sub = SubscriptionService.get_subscription_by_id(db, sub_id)
+        if sub.status != SubscriptionStatus.ACTIVE.value:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Only active subscriptions can be paused. Current status is '{sub.status}'.",
+            )
+        return SubscriptionService.update_status(db, sub_id, SubscriptionStatus.PAUSED.value, user_id)
+
+    @staticmethod
+    def close_subscription(db: Session, sub_id: int, user_id: Optional[int]) -> SubscriptionOut:
+        return SubscriptionService.update_status(db, sub_id, SubscriptionStatus.CLOSED.value, user_id)
+
+    @staticmethod
+    def renew_subscription(db: Session, sub_id: int, user_id: Optional[int]) -> SubscriptionOut:
+        sub = SubscriptionService.get_subscription_by_id(db, sub_id)
+        if not sub.plan.renewable:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="The subscription plan does not allow renewal.",
+            )
+
+        base_date = sub.next_billing_date or date.today()
+        sub.next_billing_date = SubscriptionService.calculate_next_date(base_date, sub.plan.billing_period)
+        if sub.expiry_date:
+            sub.expiry_date = SubscriptionService.calculate_next_date(sub.expiry_date, sub.plan.billing_period)
+
+        old_status = sub.status
+        sub.status = SubscriptionStatus.ACTIVE.value
+
+        log = ActivityLog(
+            entity_type="subscription",
+            entity_id=sub.id,
+            action="renewed",
+            old_value=f"status: {old_status}, next_billing: {base_date}",
+            new_value=f"status: active, next_billing: {sub.next_billing_date}",
+            user_id=user_id,
+        )
+        db.add(log)
+        db.commit()
+        db.refresh(sub)
+        return SubscriptionService.to_out(db, sub)
+
+    @staticmethod
+    def get_timeline(db: Session, sub_id: int) -> List[ActivityLog]:
+        SubscriptionService.get_subscription_by_id(db, sub_id)
+        return db.query(ActivityLog).filter(
+            ActivityLog.entity_type == "subscription",
+            ActivityLog.entity_id == sub_id,
+        ).order_by(ActivityLog.created_at.desc()).all()

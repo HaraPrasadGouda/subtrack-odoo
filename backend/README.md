@@ -16,13 +16,13 @@ Brightloop Software (Odoo Hackathon)
 backend/
 ├── app/
 │   ├── core/           # Configuration, database engine, security & JWT, dependencies
-│   ├── models/         # SQLAlchemy ORM models (User, Contact, Product, Plan, Tax, Discount, Template)
+│   ├── models/         # SQLAlchemy ORM models (User, Contact, Product, Plan, Tax, Discount, Template, Subscription, ActivityLog)
 │   ├── schemas/        # Pydantic request/response validation schemas
-│   ├── services/       # Business logic (AuthService, ProductService, PlanService, etc.)
-│   ├── routers/        # FastAPI endpoints (/api/auth, /api/users, /api/products, etc.)
+│   ├── services/       # Business logic (AuthService, ProductService, PlanService, SubscriptionService, etc.)
+│   ├── routers/        # FastAPI endpoints (/api/auth, /api/users, /api/products, /api/subscriptions, etc.)
 │   ├── init_db.py      # Database bootstrap & admin seeder
 │   └── main.py         # FastAPI application entry point & CORS configuration
-├── tests/              # Pytest test suite (test_auth.py, test_crud.py)
+├── tests/              # Pytest test suite (test_auth.py, test_crud.py, test_subscriptions.py)
 ├── .env.example        # Environment variable template
 ├── .gitignore          # Git ignore rules (.venv, .env, *.db)
 ├── pytest.ini          # Pytest configuration
@@ -89,6 +89,18 @@ Interactive API documentation: `http://localhost:8000/docs`
 - `/api/discounts`: Discounts CRUD (admin only).
 - `/api/templates`: Quotation templates and template lines CRUD (internal/admin).
 - `/api/customers`: Customer contacts CRUD with state/GST details (internal/admin).
+
+### Step 3: Subscriptions Management
+- `GET /api/subscriptions`: List subscriptions with status/customer filters and pagination.
+- `POST /api/subscriptions`: Create subscription with auto numbering (`SUB-0001`), line calculations (variant extra price + tax + discount), and activity logging.
+- `GET /api/subscriptions/{id}`: Detailed subscription view with lines, customer, and plan.
+- `POST /api/subscriptions/from-template/{id}`: Create pre-filled quotation subscription directly from quotation template lines.
+- `POST /api/subscriptions/{id}/status`: State machine transition validation (`draft` -> `quotation` -> `confirmed` -> `active` -> `paused`/`closed`).
+- `POST /api/subscriptions/{id}/pause`: Pauses subscription (enforces `plan.pausable`).
+- `POST /api/subscriptions/{id}/renew`: Renews subscription by advancing `next_billing_date` and `expiry_date` (enforces `plan.renewable`).
+- `POST /api/subscriptions/{id}/close`: Closes subscription (enforces `plan.closable`).
+- `GET /api/subscriptions/{id}/timeline`: Audit activity timeline tracking all status/price modifications.
+- Automatic plan closure: Subscriptions tied to plans with `auto_close=True` close automatically after plan `end_date`.
 
 ---
 
