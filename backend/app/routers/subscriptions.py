@@ -108,6 +108,20 @@ def close_subscription(
     return SubscriptionService.close_subscription(db, id, current_user.id)
 
 
+from backend.app.schemas.invoice import InvoiceOut
+from backend.app.services.invoice_service import InvoiceService
+
+
+@router.post("/{id}/invoice", response_model=InvoiceOut, status_code=status.HTTP_201_CREATED)
+def create_subscription_invoice(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_internal_or_admin),
+):
+    """Generate invoice for subscription's current billing period."""
+    return InvoiceService.create_invoice_for_subscription(db, id, current_user.id)
+
+
 @router.get("/{id}/timeline", response_model=List[ActivityLogOut])
 def get_subscription_timeline(
     id: int,

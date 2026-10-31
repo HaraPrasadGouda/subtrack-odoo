@@ -8,6 +8,7 @@ Brightloop Software (Odoo Hackathon)
 - **Password Security**: Bcrypt hashing with policy enforcement
 - **Validation**: Pydantic v2
 - **Testing**: Pytest + FastAPI TestClient
+- **PDF Generation**: ReportLab
 
 ---
 
@@ -16,13 +17,13 @@ Brightloop Software (Odoo Hackathon)
 backend/
 ├── app/
 │   ├── core/           # Configuration, database engine, security & JWT, dependencies
-│   ├── models/         # SQLAlchemy ORM models (User, Contact, Product, Plan, Tax, Discount, Template, Subscription, ActivityLog)
+│   ├── models/         # SQLAlchemy ORM models (User, Contact, Product, Plan, Tax, Discount, Template, Subscription, ActivityLog, Invoice, Payment, Reminder)
 │   ├── schemas/        # Pydantic request/response validation schemas
-│   ├── services/       # Business logic (AuthService, ProductService, PlanService, SubscriptionService, etc.)
-│   ├── routers/        # FastAPI endpoints (/api/auth, /api/users, /api/products, /api/subscriptions, etc.)
+│   ├── services/       # Business logic (AuthService, ProductService, PlanService, SubscriptionService, InvoiceService, etc.)
+│   ├── routers/        # FastAPI endpoints (/api/auth, /api/users, /api/products, /api/subscriptions, /api/invoices, /api/billing, etc.)
 │   ├── init_db.py      # Database bootstrap & admin seeder
 │   └── main.py         # FastAPI application entry point & CORS configuration
-├── tests/              # Pytest test suite (test_auth.py, test_crud.py, test_subscriptions.py)
+├── tests/              # Pytest test suite (test_auth.py, test_crud.py, test_subscriptions.py, test_invoices.py)
 ├── .env.example        # Environment variable template
 ├── .gitignore          # Git ignore rules (.venv, .env, *.db)
 ├── pytest.ini          # Pytest configuration
@@ -101,6 +102,16 @@ Interactive API documentation: `http://localhost:8000/docs`
 - `POST /api/subscriptions/{id}/close`: Closes subscription (enforces `plan.closable`).
 - `GET /api/subscriptions/{id}/timeline`: Audit activity timeline tracking all status/price modifications.
 - Automatic plan closure: Subscriptions tied to plans with `auto_close=True` close automatically after plan `end_date`.
+
+### Step 4: Invoicing & Billing Engine
+- `POST /api/subscriptions/{id}/invoice`: Generates invoice for subscription's current billing period, automatically applying discounts (with usage limits & dates check), computing taxes, calculating GST split (CGST/SGST for Odisha vs IGST for interstate), and advancing `next_billing_date`. Prevents double billing.
+- `POST /api/billing/run`: Automated batch billing run across all active subscriptions due (`next_billing_date <= today`). Never bills twice; returns `created_count` and `skipped_count`.
+- `GET /api/invoices`: List invoices with filters (`status`, `customer_id`, `overdue`, `outstanding`, pagination).
+- `GET /api/invoices/{id}`: Get single invoice with line breakdown.
+- `POST /api/invoices/{id}/confirm`: Status transition `draft` -> `confirmed`.
+- `POST /api/invoices/{id}/cancel`: Cancel invoice (`draft`/`confirmed` -> `cancelled`).
+- `POST /api/invoices/{id}/send`: Mock invoice email dispatch logged to console for demo.
+- `GET /api/invoices/{id}/pdf`: Downloads professional styled invoice PDF generated using ReportLab.
 
 ---
 

@@ -7,6 +7,7 @@ from backend.app.models.discount import Discount, DiscountType, DiscountAppliesT
 from backend.app.models.template import QuotationTemplate, TemplateLine
 from backend.app.models.subscription import Subscription, SubscriptionLine, SubscriptionStatus
 from backend.app.models.activity import ActivityLog
+from backend.app.models.invoice import Invoice, InvoiceLine, InvoiceStatus, Payment, Reminder
 
 __all__ = [
     "User",
@@ -27,4 +28,9 @@ __all__ = [
     "SubscriptionLine",
     "SubscriptionStatus",
     "ActivityLog",
+    "Invoice",
+    "InvoiceLine",
+    "InvoiceStatus",
+    "Payment",
+    "Reminder",
 ]
