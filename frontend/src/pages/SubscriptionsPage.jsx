@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   RefreshCcw, Plus, Search, ChevronRight, ArrowLeft,
-  Calendar, CheckCircle2, Clock, FileText,
+  CheckCircle2, Clock, FileText,
   Play, Pause, XCircle, RotateCcw, Receipt,
   Check,
 } from 'lucide-react';
