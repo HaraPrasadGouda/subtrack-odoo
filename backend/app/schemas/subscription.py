@@ -57,6 +57,25 @@ class SubscriptionStatusUpdate(BaseModel):
     status: str
 
 
+class ChangePlanRequest(BaseModel):
+    new_plan_id: int
+
+
+class ChangePlanResponse(BaseModel):
+    subscription_id: int
+    old_plan_id: int
+    old_plan_name: str
+    new_plan_id: int
+    new_plan_name: str
+    unused_credit: float
+    new_plan_prorated: float
+    net_adjusted_amount: float
+    invoice_id: Optional[int] = None
+    invoice_number: Optional[str] = None
+    invoice_total: Optional[float] = None
+    status: str
+
+
 class SubscriptionUpdate(BaseModel):
     customer_id: Optional[int] = None
     plan_id: Optional[int] = None

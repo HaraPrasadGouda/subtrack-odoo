@@ -18,6 +18,7 @@ from backend.app.schemas.subscription import (
     SubscriptionLineCreate,
     SubscriptionLineOut,
     SubscriptionFromTemplate,
+    ChangePlanResponse,
 )
 
 
@@ -410,3 +411,154 @@ class SubscriptionService:
             ActivityLog.entity_type == "subscription",
             ActivityLog.entity_id == sub_id,
         ).order_by(ActivityLog.created_at.desc()).all()
+
+    @staticmethod
+    def change_plan(
+        db: Session,
+        sub_id: int,
+        new_plan_id: int,
+        user_id: Optional[int] = None,
+    ) -> ChangePlanResponse:
+        from backend.app.models.invoice import Invoice, InvoiceLine, InvoiceStatus
+        from backend.app.services.invoice_service import InvoiceService
+
+        sub = SubscriptionService.get_subscription_by_id(db, sub_id)
+        if sub.status == SubscriptionStatus.CLOSED.value:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot change plan of a closed subscription.",
+            )
+
+        if sub.plan_id == new_plan_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Subscription is already enrolled in this plan.",
+            )
+
+        new_plan = db.query(RecurringPlan).filter(RecurringPlan.id == new_plan_id).first()
+        if not new_plan:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Plan {new_plan_id} not found.",
+            )
+
+        old_plan = sub.plan
+        today = date.today()
+
+        # Find the most recent invoice for current period
+        last_invoice = (
+            db.query(Invoice)
+            .filter(Invoice.subscription_id == sub.id)
+            .order_by(Invoice.period_start.desc())
+            .first()
+        )
+
+        if last_invoice and last_invoice.period_start <= today <= last_invoice.period_end:
+            total_days = max(1, (last_invoice.period_end - last_invoice.period_start).days + 1)
+            used_days = max(0, min(total_days, (today - last_invoice.period_start).days))
+            remaining_days = max(0, total_days - used_days)
+            unused_ratio = remaining_days / float(total_days)
+
+            # Unused credit from previous plan
+            unused_credit = round(last_invoice.subtotal * unused_ratio, 2)
+            new_plan_prorated = round(new_plan.price * unused_ratio, 2)
+            period_start = today
+            period_end = last_invoice.period_end
+        else:
+            total_days = 30
+            remaining_days = 30
+            unused_credit = 0.0
+            new_plan_prorated = new_plan.price
+            period_start = today
+            period_end = SubscriptionService.calculate_next_date(period_start, new_plan.billing_period) - timedelta(days=1)
+
+        net_adjusted = round(new_plan_prorated - unused_credit, 2)
+
+        # Create adjusted invoice
+        inv_number = InvoiceService.generate_number(db)
+        inv_total = max(0.0, net_adjusted)
+        inv_status = InvoiceStatus.PAID.value if inv_total == 0.0 else InvoiceStatus.DRAFT.value
+
+        # Handle unique constraint on (subscription_id, period_start)
+        existing = db.query(Invoice).filter(
+            Invoice.subscription_id == sub.id,
+            Invoice.period_start == period_start,
+        ).first()
+        if existing:
+            adj_period_start = period_start + timedelta(days=1)
+        else:
+            adj_period_start = period_start
+
+        inv = Invoice(
+            number=inv_number,
+            subscription_id=sub.id,
+            customer_id=sub.customer_id,
+            invoice_date=today,
+            due_date=today + timedelta(days=15),
+            period_start=adj_period_start,
+            period_end=period_end,
+            subtotal=inv_total,
+            discount_total=round(unused_credit, 2) if net_adjusted > 0 else 0.0,
+            tax_total=0.0,
+            cgst=0.0,
+            sgst=0.0,
+            igst=0.0,
+            total=inv_total,
+            amount_paid=inv_total if inv_status == InvoiceStatus.PAID.value else 0.0,
+            status=inv_status,
+        )
+        db.add(inv)
+        db.flush()
+
+        # Add invoice line item
+        desc = f"Plan change adjustment: {old_plan.name} -> {new_plan.name} ({remaining_days}/{total_days} days prorated)"
+        product_id_val = sub.lines[0].product_id if (sub.lines and len(sub.lines) > 0) else 1
+        line_item = InvoiceLine(
+            invoice_id=inv.id,
+            product_id=product_id_val,
+            description=desc,
+            qty=1,
+            unit_price=inv_total,
+            discount_amount=0.0,
+            tax_amount=0.0,
+            amount=inv_total,
+        )
+        db.add(line_item)
+
+        # Update subscription plan
+        old_plan_name = old_plan.name
+        old_plan_price = old_plan.price
+        sub.plan_id = new_plan.id
+
+        # Activity log entry
+        log = ActivityLog(
+            entity_type="subscription",
+            entity_id=sub.id,
+            action="plan_changed",
+            old_value=f"Plan: {old_plan_name} (₹{old_plan_price})",
+            new_value=(
+                f"Plan: {new_plan.name} (₹{new_plan.price}). "
+                f"Unused credit: ₹{unused_credit}, New plan charge: ₹{new_plan_prorated}, "
+                f"Net adjusted: ₹{net_adjusted}. Invoice {inv_number} created."
+            ),
+            user_id=user_id,
+        )
+        db.add(log)
+        db.commit()
+        db.refresh(sub)
+        db.refresh(inv)
+
+        return ChangePlanResponse(
+            subscription_id=sub.id,
+            old_plan_id=old_plan.id,
+            old_plan_name=old_plan_name,
+            new_plan_id=new_plan.id,
+            new_plan_name=new_plan.name,
+            unused_credit=unused_credit,
+            new_plan_prorated=new_plan_prorated,
+            net_adjusted_amount=net_adjusted,
+            invoice_id=inv.id,
+            invoice_number=inv.number,
+            invoice_total=inv.total,
+            status=sub.status,
+        )

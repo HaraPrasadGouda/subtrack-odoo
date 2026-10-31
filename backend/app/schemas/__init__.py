@@ -35,6 +35,8 @@ from backend.app.schemas.subscription import (
     SubscriptionLineOut,
     SubscriptionFromTemplate,
     SubscriptionStatusUpdate,
+    ChangePlanRequest,
+    ChangePlanResponse,
 )
 from backend.app.schemas.activity import ActivityLogOut
 from backend.app.schemas.invoice import (
@@ -90,6 +92,8 @@ __all__ = [
     "SubscriptionLineOut",
     "SubscriptionFromTemplate",
     "SubscriptionStatusUpdate",
+    "ChangePlanRequest",
+    "ChangePlanResponse",
     "ActivityLogOut",
     "InvoiceOut",
     "InvoiceLineOut",

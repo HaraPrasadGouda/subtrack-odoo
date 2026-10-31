@@ -9,6 +9,8 @@ from backend.app.schemas.subscription import (
     SubscriptionOut,
     SubscriptionFromTemplate,
     SubscriptionStatusUpdate,
+    ChangePlanRequest,
+    ChangePlanResponse,
 )
 from backend.app.schemas.activity import ActivityLogOut
 from backend.app.services.subscription_service import SubscriptionService
@@ -129,6 +131,21 @@ def create_subscription_invoice(
 ):
     """Generate invoice for subscription's current billing period."""
     return InvoiceService.create_invoice_for_subscription(db, id, current_user.id)
+
+
+@router.post("/{id}/change-plan", response_model=ChangePlanResponse)
+def change_subscription_plan(
+    id: int,
+    data: ChangePlanRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_internal_or_admin),
+):
+    """
+    Change subscription plan with proration:
+    Calculates unused amount of current period, prorates new plan,
+    and creates an adjusted invoice.
+    """
+    return SubscriptionService.change_plan(db, id, data.new_plan_id, current_user.id)
 
 
 @router.get("/{id}/timeline", response_model=List[ActivityLogOut])

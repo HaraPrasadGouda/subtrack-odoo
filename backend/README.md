@@ -173,6 +173,14 @@ Interactive API documentation: `http://localhost:8000/docs`
   - **Expected Revenue Next 30 Days**: Total recurring amount expected across all active subscriptions with upcoming billing in the next 30 days.
   - **6-Month Historical Revenue Series**: Month-by-month historical payment collections and transaction counts.
 
+### Step 11: Plan Changes & Proration Engine
+- `POST /api/subscriptions/{id}/change-plan`: Mid-cycle plan change with automatic proration:
+  - Calculates unused portion and credit of current billing period: `(remaining_days / total_days) * current_charge`.
+  - Prorates new plan cost for remaining days: `(remaining_days / total_days) * new_plan_price`.
+  - Computes net adjustment (`new_plan_prorated - unused_credit`).
+  - Generates an adjusted invoice detailing the credit and new plan charges.
+  - Updates subscription plan and logs full audit details to activity timeline.
+
 ---
 
 ## Running Tests
