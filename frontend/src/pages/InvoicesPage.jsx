@@ -81,7 +81,7 @@ function RecordPaymentModal({ invoice, onClose, onRecorded }) {
     try {
       await recordPayment(invoice.id, {
         method,
-        amount: Math.round(Number(amount)),
+        amount: Number(amount),
         date,
         note: note.trim() || undefined,
       });
@@ -133,9 +133,10 @@ function RecordPaymentModal({ invoice, onClose, onRecorded }) {
           </div>
 
           <Input
-            label="Amount (paise)"
+            label="Amount (₹)"
             type="number"
-            min="1"
+            min="0.01"
+            step="0.01"
             value={amount}
             onChange={(e) => {
               setAmount(e.target.value);
