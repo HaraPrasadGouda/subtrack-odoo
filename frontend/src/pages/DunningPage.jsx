@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-  Bell, Play, Search, CheckCircle2, Clock, AlertTriangle,
-  Send, History, ShieldAlert,
+  Bell, Search, CheckCircle2, Clock, AlertTriangle,
+  Send, ShieldAlert,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import clsx from 'clsx';
