@@ -23,7 +23,7 @@ backend/
 │   ├── routers/        # FastAPI endpoints (/api/auth, /api/users, /api/products, /api/subscriptions, /api/invoices, /api/billing, etc.)
 │   ├── init_db.py      # Database bootstrap & admin seeder
 │   └── main.py         # FastAPI application entry point & CORS configuration
-├── tests/              # Pytest test suite (test_auth.py, test_crud.py, test_subscriptions.py, test_invoices.py)
+├── tests/              # Pytest test suite (test_auth.py, test_crud.py, test_subscriptions.py, test_invoices.py, test_payments.py)
 ├── .env.example        # Environment variable template
 ├── .gitignore          # Git ignore rules (.venv, .env, *.db)
 ├── pytest.ini          # Pytest configuration
@@ -107,11 +107,17 @@ Interactive API documentation: `http://localhost:8000/docs`
 - `POST /api/subscriptions/{id}/invoice`: Generates invoice for subscription's current billing period, automatically applying discounts (with usage limits & dates check), computing taxes, calculating GST split (CGST/SGST for Odisha vs IGST for interstate), and advancing `next_billing_date`. Prevents double billing.
 - `POST /api/billing/run`: Automated batch billing run across all active subscriptions due (`next_billing_date <= today`). Never bills twice; returns `created_count` and `skipped_count`.
 - `GET /api/invoices`: List invoices with filters (`status`, `customer_id`, `overdue`, `outstanding`, pagination).
-- `GET /api/invoices/{id}`: Get single invoice with line breakdown.
+- `GET /api/invoices/{id}`: Get single invoice with line breakdown and payment records.
 - `POST /api/invoices/{id}/confirm`: Status transition `draft` -> `confirmed`.
 - `POST /api/invoices/{id}/cancel`: Cancel invoice (`draft`/`confirmed` -> `cancelled`).
 - `POST /api/invoices/{id}/send`: Mock invoice email dispatch logged to console for demo.
 - `GET /api/invoices/{id}/pdf`: Downloads professional styled invoice PDF generated using ReportLab.
+
+### Step 5: Payments & Settlement
+- `POST /api/invoices/{id}/payments`: Record payment against an invoice (methods: `upi`, `card`, `bank`, `cash`). Increments `amount_paid` and automatically transitions invoice status to `paid` once `amount_paid >= total`.
+- `GET /api/invoices/{id}/payments`: Lists all payment transaction entries recorded for an invoice.
+- `GET /api/invoices?status=outstanding`: Filter for unpaid or partially paid invoices (`amount_paid < total` and status not cancelled or paid).
+- `GET /api/invoices?overdue=true`: Filter for invoices with `due_date < today` that remain unpaid.
 
 ---
 

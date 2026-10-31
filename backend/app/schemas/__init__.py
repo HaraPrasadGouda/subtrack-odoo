@@ -42,6 +42,8 @@ from backend.app.schemas.invoice import (
     InvoiceLineOut,
     BillingRunOut,
     SendInvoiceResponse,
+    PaymentCreate,
+    PaymentOut,
 )
 
 __all__ = [
@@ -88,4 +90,6 @@ __all__ = [
     "InvoiceLineOut",
     "BillingRunOut",
     "SendInvoiceResponse",
+    "PaymentCreate",
+    "PaymentOut",
 ]

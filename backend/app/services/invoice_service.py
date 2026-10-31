@@ -9,13 +9,13 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 
-from backend.app.models.invoice import Invoice, InvoiceLine, InvoiceStatus
+from backend.app.models.invoice import Invoice, InvoiceLine, InvoiceStatus, Payment
 from backend.app.models.subscription import Subscription, SubscriptionStatus
 from backend.app.models.contact import Contact
 from backend.app.models.tax import Tax
 from backend.app.models.discount import Discount, DiscountType
 from backend.app.models.activity import ActivityLog
-from backend.app.schemas.invoice import InvoiceOut, BillingRunOut, SendInvoiceResponse
+from backend.app.schemas.invoice import InvoiceOut, BillingRunOut, SendInvoiceResponse, PaymentCreate, PaymentOut
 from backend.app.services.subscription_service import SubscriptionService
 
 
@@ -256,9 +256,9 @@ class InvoiceService:
 
         if status:
             if status.lower() == "outstanding":
-                # Confirmed and not fully paid
+                # Invoices not paid and not cancelled, where amount_paid < total
                 query = query.filter(
-                    Invoice.status == InvoiceStatus.CONFIRMED.value,
+                    Invoice.status.notin_([InvoiceStatus.PAID.value, InvoiceStatus.CANCELLED.value]),
                     Invoice.amount_paid < Invoice.total,
                 )
             else:
@@ -323,6 +323,69 @@ class InvoiceService:
             email=customer_email,
             invoice_number=invoice.number,
         )
+
+    @staticmethod
+    def record_payment(
+        db: Session,
+        invoice_id: int,
+        data: PaymentCreate,
+        user_id: Optional[int] = None,
+    ) -> PaymentOut:
+        invoice = InvoiceService.get_invoice_by_id(db, invoice_id)
+        if invoice.status == InvoiceStatus.CANCELLED.value:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot record payment for a cancelled invoice.",
+            )
+
+        valid_methods = ["upi", "card", "bank", "cash"]
+        if data.method.lower() not in valid_methods:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid payment method '{data.method}'. Allowed: {', '.join(valid_methods)}",
+            )
+
+        payment_date = data.date or date.today()
+        payment = Payment(
+            invoice_id=invoice.id,
+            method=data.method.lower(),
+            amount=data.amount,
+            date=payment_date,
+            note=data.note,
+        )
+        db.add(payment)
+
+        # Update amount_paid
+        invoice.amount_paid = round(invoice.amount_paid + data.amount, 2)
+
+        # Auto set paid when amount_paid >= total
+        old_status = invoice.status
+        if invoice.amount_paid >= invoice.total:
+            invoice.status = InvoiceStatus.PAID.value
+        elif invoice.status == InvoiceStatus.DRAFT.value:
+            invoice.status = InvoiceStatus.CONFIRMED.value
+
+        # Log activity
+        log = ActivityLog(
+            entity_type="invoice",
+            entity_id=invoice.id,
+            action="payment_received",
+            old_value=f"status: {old_status}, paid: {invoice.amount_paid - data.amount}",
+            new_value=f"Paid {data.amount} via {data.method}. Status: {invoice.status}, Total paid: {invoice.amount_paid}/{invoice.total}",
+            user_id=user_id,
+        )
+        db.add(log)
+
+        db.commit()
+        db.refresh(payment)
+        db.refresh(invoice)
+        return PaymentOut.model_validate(payment)
+
+    @staticmethod
+    def get_invoice_payments(db: Session, invoice_id: int) -> List[PaymentOut]:
+        InvoiceService.get_invoice_by_id(db, invoice_id)
+        payments = db.query(Payment).filter(Payment.invoice_id == invoice_id).order_by(Payment.date.desc()).all()
+        return [PaymentOut.model_validate(p) for p in payments]
 
     @staticmethod
     def generate_pdf(db: Session, invoice_id: int) -> bytes:

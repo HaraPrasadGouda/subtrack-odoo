@@ -1,6 +1,6 @@
 from datetime import date, datetime
 from typing import List, Optional
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from backend.app.schemas.contact import ContactOut
 from backend.app.schemas.product import ProductOut
 
@@ -16,6 +16,24 @@ class InvoiceLineOut(BaseModel):
     tax_amount: float
     amount: float
     product: Optional[ProductOut] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PaymentCreate(BaseModel):
+    method: str = "bank"  # upi, card, bank, cash
+    amount: float = Field(..., gt=0, description="Payment amount must be greater than 0")
+    date: Optional[date] = None
+    note: Optional[str] = None
+
+
+class PaymentOut(BaseModel):
+    id: int
+    invoice_id: int
+    method: str
+    amount: float
+    date: date
+    note: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -42,6 +60,7 @@ class InvoiceOut(BaseModel):
 
     customer: Optional[ContactOut] = None
     lines: List[InvoiceLineOut] = []
+    payments: List[PaymentOut] = []
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -56,4 +75,3 @@ class SendInvoiceResponse(BaseModel):
     message: str
     email: str
     invoice_number: str
-

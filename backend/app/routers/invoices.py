@@ -4,7 +4,12 @@ from sqlalchemy.orm import Session
 from backend.app.core.database import get_db
 from backend.app.core.deps import require_internal_or_admin
 from backend.app.models.user import User
-from backend.app.schemas.invoice import InvoiceOut, SendInvoiceResponse
+from backend.app.schemas.invoice import (
+    InvoiceOut,
+    SendInvoiceResponse,
+    PaymentCreate,
+    PaymentOut,
+)
 from backend.app.services.invoice_service import InvoiceService
 
 router = APIRouter(prefix="/invoices", tags=["Invoices"])
@@ -76,6 +81,30 @@ def send_invoice(
 ):
     """Send invoice email (logs to console for demo)."""
     return InvoiceService.send_invoice(db, id, current_user.id)
+
+
+@router.post("/{id}/payments", response_model=PaymentOut, status_code=status.HTTP_201_CREATED)
+def record_payment(
+    id: int,
+    data: PaymentCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_internal_or_admin),
+):
+    """
+    Record payment against an invoice.
+    Automatically sets invoice status to 'paid' when amount_paid >= total.
+    """
+    return InvoiceService.record_payment(db, id, data, current_user.id)
+
+
+@router.get("/{id}/payments", response_model=List[PaymentOut])
+def list_payments(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_internal_or_admin),
+):
+    """List all payments recorded for an invoice."""
+    return InvoiceService.get_invoice_payments(db, id)
 
 
 @router.get("/{id}/pdf")
